@@ -17,7 +17,7 @@ The plan that set up this repo, with the architecture, the screens and the reaso
 
 ## Planned structure
 
-This is the target layout. Issue #2 scaffolds the app and its tooling, and issue #3 adds `contract/` and `src/lib/api/`; until then most of it doesn't exist.
+This is the target layout. The app, its tooling and the empty folders exist; issue #3 adds `contract/`, `scripts/` and `src/lib/api/`, and later issues fill the rest.
 
 ```text
 contract/                       API contract copied from claude-code-training; SOURCE = its commit SHA
@@ -152,8 +152,6 @@ Build in small steps. For each step:
 3. Run lint: `npm run lint`.
 4. Run type checks: `npm run typecheck`.
 5. Run the tests: `npm run test`.
-
-> **Until issue #2 is merged**, the Next.js app, the `npm run` scripts and the Stop hook below don't exist yet. Don't rely on the hook or report it as evidence before then. Remove this note in #2.
 
 A `Stop` hook (`.claude/hooks/check.sh`, set up in `.claude/settings.json`) runs lint, type check and unit tests when you changed files and tries to finish, and blocks until they pass. It skips the Playwright specs, which need the backend, so run `npm run e2e` yourself before Phase 4. After 3 failed stops in a row it lets you stop and warns the user.
 
