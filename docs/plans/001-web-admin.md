@@ -1,7 +1,7 @@
 # Plan 001: StrideQuest web admin — workflow, structure, sign in and challenge management
 
-Status: draft
-Approved: <the user fills in the date>
+Status: approved
+Approved: 2026-10-20
 Issues: <filled in after approval>
 
 ## Context
