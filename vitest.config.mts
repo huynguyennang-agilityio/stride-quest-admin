@@ -9,6 +9,7 @@ export default defineConfig({
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
       "@tests": fileURLToPath(new URL("./tests", import.meta.url)),
+      "@contract": fileURLToPath(new URL("./contract", import.meta.url)),
       "server-only": fileURLToPath(new URL("./tests/server-only.ts", import.meta.url)),
     },
   },

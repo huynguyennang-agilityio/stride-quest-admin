@@ -10,7 +10,7 @@ The backend (FastAPI) and the mobile app live in [`claude-code-training`](https:
 
 ## Status
 
-The Next.js app and its tooling (issue #2), and the API contract, typed client, error mapping and mock mode (issue #3) are in place; the home page is a placeholder. Sign in (issue #4) and the challenge screens (issues #5–#8) come next.
+The Next.js app and its tooling (issue #2), and the API contract, typed client, error mapping and mock mode (issue #3) are in place; the home page is a placeholder. Admin sign in and sign out with the route guard (issue #4) are in place; the challenge screens (issues #5–#8) come next.
 
 ## Requirements
 
@@ -46,7 +46,28 @@ Dependency versions are pinned (`.npmrc` sets `save-exact`). Install from the lo
 | `npm run test` | Vitest with React Testing Library and `vitest-axe` (`test:watch` to watch) |
 | `npm run contract:types` | Regenerate `src/lib/api/schema.d.ts` from `contract/openapi.json` |
 | `npm run contract:check` | Fail when `contract/SOURCE` is not a commit SHA or the generated types are stale |
-| `npm run e2e` | Playwright specs in `e2e/`, in the installed Chrome; starts `npm run dev` if nothing runs on port 3000 |
+| `npm run e2e` | Playwright specs in `e2e/` against the local backend, in the installed Chrome; builds and starts the app (`npm run build && npm run start`) if nothing runs on port 3000 |
+
+## Sign in, session and the proxy
+
+Sign in is `/login`: the form calls the `signIn` Server Action, which calls `POST /api/v1/auth/signin` from the server. Only an account with `role = admin` gets a session; any other account is signed out again at once with "This account isn't an admin". The session is two `HttpOnly`, `SameSite=Lax` cookies (`Secure` in production): `sq_access` and `sq_refresh`. The browser never sees a token.
+
+[`src/proxy.ts`](src/proxy.ts) (Next.js 16's name for middleware) guards every page but `/login` and is the only place that refreshes the tokens. The access cookie expires a minute before the token does; when it is gone the proxy swaps the refresh token for a new pair, once per refresh token even for parallel requests (in one server process). A page that still gets `401` from the backend sends the person to `/login`. The `next` parameter of `/login` is followed only when it is a relative path inside the app.
+
+## End-to-end tests
+
+`npm run e2e` runs [`e2e/`](e2e/) against the app and the **local** backend (never a shared or production one). It needs a local admin account. Sign one up in the app or through the API, make it an admin on the backend (`backend/` of `claude-code-training`, virtualenv active), and put its credentials in the git-ignored `.env.local`:
+
+```bash
+python -m app.scripts.create_admin you@example.com
+```
+
+```bash
+E2E_ADMIN_EMAIL=you@example.com
+E2E_ADMIN_PASSWORD=...
+```
+
+Without them the specs are skipped. The non-admin account the specs need is signed up through the API with a fresh email each run. The backend rate-limits failed sign-ins (20 per IP in 15 minutes); the specs make one failed attempt per run.
 
 ## API contract and mock mode
 
