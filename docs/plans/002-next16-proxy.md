@@ -1,7 +1,7 @@
 # Plan 002: Use the Next.js 16 `proxy` file for the route guard and token refresh
 
-Status: draft
-Approved: <the user fills in the date>
+Status: approved
+Approved: 2026-10-20
 Issues: <filled in after approval>
 
 ## Context
