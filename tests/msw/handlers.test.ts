@@ -28,13 +28,67 @@ describe("mock handlers", () => {
 
   it.each([
     ["DELETE", "/api/v1/challenges/7", 204],
-    ["POST", "/api/v1/challenges", 201],
-    ["POST", "/api/v1/images", 201],
     ["GET", "/api/v1/quests", 200],
   ] as const)("answer %s %s with %i", async (method, path, status) => {
     const response = await fetch(apiUrl(path), { method });
 
     expect(response.status).toBe(status);
+  });
+
+  it("creates a draft with the title it was given", async () => {
+    const response = await fetch(apiUrl("/api/v1/challenges"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Old Quarter 50K Steps" }),
+    });
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({
+      title: "Old Quarter 50K Steps",
+      status: "draft",
+    });
+  });
+
+  it("shows the backend's field errors for a title with backend-error", async () => {
+    const response = await fetch(apiUrl("/api/v1/challenges"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Backend-Error test" }),
+    });
+
+    expect(response.status).toBe(422);
+    expect((await response.json()).error.fields[0].field).toBe("title");
+  });
+
+  it("creates a quest with the title it was given", async () => {
+    const response = await fetch(apiUrl("/api/v1/quests"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Hue Heritage", description: "Old capital." }),
+    });
+
+    expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({
+      title: "Hue Heritage",
+      description: "Old capital.",
+    });
+  });
+
+  it.each([
+    ["cover.png", 201, undefined],
+    ["too-large.png", 413, "image_too_large"],
+    ["bad-type.png", 415, "unsupported_image_type"],
+    ["failed.png", 502, "upload_failed"],
+    ["unconfigured.png", 503, "storage_not_configured"],
+  ])("answers an upload of %s with %i", async (name, status, code) => {
+    const body = new FormData();
+    body.append("kind", "covers");
+    body.append("file", new File(["x"], name, { type: "image/png" }));
+
+    const response = await fetch(apiUrl("/api/v1/images"), { method: "POST", body });
+
+    expect(response.status).toBe(status);
+    if (code) expect((await response.json()).error.code).toBe(code);
   });
 
   describe("challenge list", () => {

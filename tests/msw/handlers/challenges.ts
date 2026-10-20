@@ -45,9 +45,27 @@ export const challengeHandlers = [
     return HttpResponse.json({ items, next_cursor: next });
   }),
   http.get(apiUrl("/api/v1/challenges/:challengeId"), () => HttpResponse.json(challengeDetail)),
-  http.post(apiUrl("/api/v1/challenges"), () =>
-    HttpResponse.json({ ...challenge, status: "draft" }, { status: 201 }),
-  ),
+  http.post(apiUrl("/api/v1/challenges"), async ({ request }) => {
+    const body = (await request.json()) as { title: string; medals?: unknown[] };
+    // Mock mode only: a title with this word shows the backend's field errors on the form.
+    if (body.title.toLowerCase().includes("backend-error")) {
+      return HttpResponse.json(
+        {
+          error: {
+            code: "validation_error",
+            message: "Request is invalid.",
+            fields: [
+              { field: "title", message: "Title is already used by another challenge." },
+              { field: "medals.0.name", message: "Medal name is not allowed." },
+              { field: "challenge", message: "Something about the challenge as a whole." },
+            ],
+          },
+        },
+        { status: 422 },
+      );
+    }
+    return HttpResponse.json({ ...challenge, title: body.title, status: "draft" }, { status: 201 });
+  }),
   http.patch(apiUrl("/api/v1/challenges/:challengeId"), () => HttpResponse.json(challenge)),
   http.delete(
     apiUrl("/api/v1/challenges/:challengeId"),
@@ -60,6 +78,28 @@ export const challengeHandlers = [
     HttpResponse.json({ ...challenge, status: "draft" }),
   ),
   http.get(apiUrl("/api/v1/quests"), () => HttpResponse.json([quest])),
-  http.post(apiUrl("/api/v1/quests"), () => HttpResponse.json(quest, { status: 201 })),
-  http.post(apiUrl("/api/v1/images"), () => HttpResponse.json(uploadedImage, { status: 201 })),
+  http.post(apiUrl("/api/v1/quests"), async ({ request }) => {
+    const body = (await request.json()) as { title: string; description?: string };
+    return HttpResponse.json(
+      { ...quest, id: quest.id + 1, title: body.title, description: body.description ?? "" },
+      { status: 201 },
+    );
+  }),
+  http.post(apiUrl("/api/v1/images"), async ({ request }) => {
+    const form = await request.formData();
+    const name = form.get("file") instanceof File ? (form.get("file") as File).name : "";
+    // Mock mode only: the file's name picks the answer, so every upload error can be seen.
+    const refusals: Record<string, [number, string, string]> = {
+      "too-large": [413, "image_too_large", "The image is over 5 MB."],
+      "bad-type": [415, "unsupported_image_type", "The file is not a JPEG, PNG or WebP image."],
+      failed: [502, "upload_failed", "Cloudinary could not be reached."],
+      unconfigured: [503, "storage_not_configured", "The server has no Cloudinary settings."],
+    };
+    const refusal = Object.entries(refusals).find(([word]) => name.includes(word));
+    if (refusal) {
+      const [status, code, message] = refusal[1];
+      return HttpResponse.json({ error: { code, message, fields: [] } }, { status });
+    }
+    return HttpResponse.json(uploadedImage, { status: 201 });
+  }),
 ];

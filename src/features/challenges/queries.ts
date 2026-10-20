@@ -2,7 +2,7 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 
-import { getTokens } from "@/features/auth/session";
+import { requireAccessToken } from "@/features/auth/queries";
 import { apiClient } from "@/lib/api/client";
 import { request } from "@/lib/api/errors";
 
@@ -28,9 +28,7 @@ export type ChallengeList = {
  * code never refreshes tokens; a 401 sends the person to /login.
  */
 export async function listChallenges(params: ChallengeListParams): Promise<ChallengeList> {
-  const { access } = await getTokens();
-  if (!access) redirect("/login");
-  const client = apiClient(access);
+  const client = apiClient(await requireAccessToken());
 
   const rows: ChallengeRow[] = [];
   let cursor: string | undefined;
