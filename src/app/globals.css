@@ -20,6 +20,14 @@
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-alert-error: var(--alert-error);
+  --color-alert-error-border: var(--alert-error-border);
+  --color-alert-error-foreground: var(--alert-error-foreground);
+  --color-alert-warning: var(--alert-warning);
+  --color-alert-warning-border: var(--alert-warning-border);
+  --color-alert-warning-foreground: var(--alert-warning-foreground);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
@@ -43,24 +51,24 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --background: #f7f8f5;
+  --foreground: #171a16;
+  --card: #ffffff;
+  --card-foreground: #171a16;
+  --popover: #ffffff;
+  --popover-foreground: #171a16;
+  --primary: #3f6212;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f3ee;
+  --secondary-foreground: #171a16;
+  --muted: #f1f3ee;
+  --muted-foreground: #5b6358;
+  --accent: #f1f3ee;
+  --accent-foreground: #171a16;
+  --destructive: #b42318;
+  --border: #e1e5dc;
+  --input: #cfd5c7;
+  --ring: #3f6212;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -74,29 +82,37 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --brand: #151a12;
+  --brand-foreground: #e7ecdf;
+  --alert-error: #fdecea;
+  --alert-error-border: #f3c2bc;
+  --alert-error-foreground: #8a1c13;
+  --alert-warning: #fdf3e1;
+  --alert-warning-border: #f0d49c;
+  --alert-warning-foreground: #6e4300;
 }
 
 /* Dark theme follows the system setting (Tailwind's default `dark:` variant). */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --background: #10130e;
+    --foreground: #e7ecdf;
+    --card: #171b14;
+    --card-foreground: #e7ecdf;
+    --popover: #171b14;
+    --popover-foreground: #e7ecdf;
+    --primary: #bef264;
+    --primary-foreground: #151a12;
+    --secondary: #232a1e;
+    --secondary-foreground: #e7ecdf;
+    --muted: #232a1e;
+    --muted-foreground: #a9b3a0;
+    --accent: #232a1e;
+    --accent-foreground: #e7ecdf;
+    --destructive: #f97066;
+    --border: #2b3326;
+    --input: #3a4433;
+    --ring: #bef264;
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);
     --chart-3: oklch(0.769 0.188 70.08);
@@ -110,6 +126,14 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+    --brand: #151a12;
+    --brand-foreground: #e7ecdf;
+    --alert-error: #3a1512;
+    --alert-error-border: #6e2a24;
+    --alert-error-foreground: #f5b5ad;
+    --alert-warning: #3a2a0e;
+    --alert-warning-border: #6b4d14;
+    --alert-warning-foreground: #f0d49c;
   }
 }
 
