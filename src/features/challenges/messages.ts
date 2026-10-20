@@ -18,6 +18,28 @@ export function createMessage(error: ApiError): string {
   }
 }
 
+/** The message for people for a failed edit, by `error.code`; never the backend's text. */
+export function updateMessage(error: Pick<ApiError, "code">): string {
+  switch (error.code) {
+    case "validation_error":
+      return VALIDATION_MESSAGE;
+    case "quest_not_found":
+      return "That quest no longer exists. Pick another.";
+    case "challenge_not_found":
+      return "This challenge no longer exists. It may have been deleted by someone else.";
+    case "challenge_in_use":
+      return "People have joined this challenge, so its type, target, dates and medals can’t change. Reload the page to see what is saved.";
+    case "challenge_not_publishable":
+      return "A published challenge needs a cover image, a description and at least one medal. Unpublish it first to remove them.";
+    case "forbidden":
+      return "This account can’t change challenges.";
+    case "network_error":
+      return "Couldn’t reach the server. Check your connection and try again.";
+    default:
+      return "The changes couldn’t be saved. Try again.";
+  }
+}
+
 export type StatusAction = "publish" | "unpublish" | "delete";
 
 /**

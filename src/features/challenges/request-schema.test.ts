@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   createChallengeSchema,
   questCreateSchema,
+  updateChallengeSchema,
   type CreateChallengeRequest,
 } from "./request-schema";
 
@@ -255,5 +256,58 @@ describe("questCreateSchema", () => {
     const result = questCreateSchema.safeParse(input);
 
     expect(!result.success && result.error.issues[0].message).toBe(message);
+  });
+});
+
+describe("updateChallengeSchema", () => {
+  const issues = (input: unknown) => {
+    const parsed = updateChallengeSchema.safeParse(input);
+    return parsed.success
+      ? {}
+      : Object.fromEntries(
+          parsed.error.issues.map((issue) => [issue.path.join("."), issue.message]),
+        );
+  };
+
+  it("takes the contract's update example", () => {
+    const example = fixtures.challenges.challengeUpdateRequest;
+
+    expect(updateChallengeSchema.parse(example)).toEqual(example);
+  });
+
+  it("takes an empty patch and any one field alone, leaving out what isn't sent", () => {
+    expect(updateChallengeSchema.parse({})).toEqual({});
+    expect(updateChallengeSchema.parse({ terms_md: "" })).toEqual({ terms_md: "" });
+  });
+
+  it("takes null for the cover, the city and the landmark, and for nothing else", () => {
+    expect(
+      updateChallengeSchema.parse({ cover_image_url: null, city: null, landmark: null }),
+    ).toEqual({ cover_image_url: null, city: null, landmark: null });
+    expect(Object.keys(issues({ title: null, description_md: null, target_value: null }))).toEqual([
+      "title",
+      "target_value",
+      "description_md",
+    ]);
+  });
+
+  it("holds each field to its create rule", () => {
+    expect(
+      issues({
+        title: " ",
+        target_value: 0,
+        ends_at: "tomorrow",
+        city: "",
+        cover_image_url: "ftp://x",
+        medals: [{ tier: "gold", name: "", threshold_value: 1, image_url: "https://x.test/a.png" }],
+      }),
+    ).toEqual({
+      title: "Enter a title.",
+      target_value: "The target must be at least 1.",
+      ends_at: "The end must be a date and time with a timezone.",
+      city: "The city can't be empty. Leave it out instead.",
+      cover_image_url: "The cover image must be an http or https URL.",
+      "medals.0.name": "Give the medal a name.",
+    });
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
+import Image from "next/image";
 import { useFormContext } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { EMPTY_MEDAL, type ChallengeFormValues } from "../form";
 import { MEDAL_TIERS, TIER_LABELS, type MedalTier } from "../request-schema";
 import { unitFor } from "../units";
-import { controlProps, Field, useFieldError } from "./form-parts";
+import { controlProps, Field, useFieldError, useFrozen } from "./form-parts";
 
 const DOT: Record<MedalTier, string> = {
   bronze: "bg-[#b8763a]",
@@ -111,8 +112,41 @@ function MedalRow({ tier }: { tier: MedalTier }) {
   );
 }
 
+/** The medals as they are, when they can't change. */
+function FrozenMedals() {
+  const { watch } = useFormContext<ChallengeFormValues>();
+  const medals = watch("medals");
+  const unit = unitFor(watch("type"));
+  const set = MEDAL_TIERS.filter((tier) => medals[tier].enabled);
+  if (set.length === 0) return <p className="text-muted-foreground text-sm">No medals.</p>;
+  return (
+    <ul className="flex flex-col gap-3">
+      {set.map((tier) => (
+        <li key={tier} className="bg-muted/40 flex items-center gap-3 rounded-[10px] border p-3.5">
+          <Image
+            src={medals[tier].imageUrl}
+            alt=""
+            width={48}
+            height={48}
+            className="size-12 flex-none object-contain"
+          />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-sm font-semibold">{medals[tier].name}</span>
+            <span className="text-muted-foreground text-xs">{TIER_LABELS[tier]}</span>
+          </div>
+          <span className="text-sm tabular-nums">
+            {medals[tier].threshold} {unit}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function MedalsEditor() {
   const summary = useFieldError("medals");
+  const frozen = useFrozen();
+  if (frozen) return <FrozenMedals />;
   return (
     <div className="flex flex-col gap-3">
       {MEDAL_TIERS.map((tier) => (

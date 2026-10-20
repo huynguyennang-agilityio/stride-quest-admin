@@ -10,10 +10,28 @@ const { challenge, challengeDetail, challengePage, quest, uploadedImage } = fixt
 //   7   published (the contract example)
 //   9   a draft with no cover, description or medal: publishing it is `challenge_not_publishable`
 //   11  a complete draft: it can be published and deleted
-//   12  a draft that people joined: deleting it is `challenge_in_use`
+//   12  a draft that people joined: deleting it, or changing its type, target, dates or
+//       medals, is `challenge_in_use`
 //   404 does not exist
 //   500 answers after a minute (the loading state), 501 answers with a server error
-const STATE = new Map<number, { status?: "draft" | "published"; deleted?: boolean }>();
+type MockState = {
+  status?: "draft" | "published";
+  deleted?: boolean;
+  /** The fields an edit changed, as the detail shows them. */
+  patch?: Record<string, unknown>;
+};
+const STATE = new Map<number, MockState>();
+/** Medals as the API takes them (no ids), so stored and sent ones compare. */
+const inputOf = (value: unknown) =>
+  Array.isArray(value)
+    ? value.map(({ tier, name, threshold_value, image_url }) => ({
+        tier,
+        name,
+        threshold_value,
+        image_url,
+      }))
+    : value;
+const setState = (id: number, change: MockState) => STATE.set(id, { ...STATE.get(id), ...change });
 
 export function resetMockChallenges() {
   STATE.clear();
@@ -40,6 +58,7 @@ function currentDetail(id: number) {
   const status = STATE.get(id)?.status ?? (draft ? "draft" : "published");
   return {
     ...detail,
+    ...STATE.get(id)?.patch,
     status,
     participant_count: status === "draft" && id !== 12 ? 0 : detail.participant_count,
   };
@@ -116,7 +135,66 @@ export const challengeHandlers = [
     }
     return HttpResponse.json({ ...challenge, title: body.title, status: "draft" }, { status: 201 });
   }),
-  http.patch(apiUrl("/api/v1/challenges/:challengeId"), () => HttpResponse.json(challenge)),
+  http.patch(apiUrl("/api/v1/challenges/:challengeId"), async ({ params, request }) => {
+    const id = Number(params.challengeId);
+    const detail = currentDetail(id);
+    if (!detail) return notFound();
+    const body = (await request.json()) as Record<string, unknown>;
+
+    // Mock mode only: a title with this word shows the backend's field errors on the form.
+    if (
+      String(body.title ?? "")
+        .toLowerCase()
+        .includes("backend-error")
+    ) {
+      return HttpResponse.json(
+        {
+          error: {
+            code: "validation_error",
+            message: "Request is invalid.",
+            fields: [{ field: "title", message: "Title is already used by another challenge." }],
+          },
+        },
+        { status: 422 },
+      );
+    }
+    // What people joined count toward can't change, but the stored value sent again is no change.
+    const frozen = ["type", "target_value", "starts_at", "ends_at", "medals"] as const;
+    const changed = frozen.filter(
+      (field) =>
+        field in body &&
+        (field === "starts_at" || field === "ends_at"
+          ? Date.parse(String(body[field])) !== Date.parse(String(detail[field]))
+          : JSON.stringify(inputOf(body[field])) !== JSON.stringify(inputOf(detail[field]))),
+    );
+    if (detail.participant_count > 0 && changed.length > 0) {
+      return HttpResponse.json(
+        {
+          error: {
+            code: "challenge_in_use",
+            message: `People have joined this challenge, so ${changed[0]} cannot change.`,
+            fields: [],
+          },
+        },
+        { status: 409 },
+      );
+    }
+    const next = { ...detail, ...body } as typeof detail;
+    if (
+      detail.status === "published" &&
+      (!next.cover_image_url || next.description_md.trim() === "" || next.medals.length === 0)
+    ) {
+      return conflict(
+        "challenge_not_publishable",
+        "A published challenge needs a cover image, a description and at least one medal.",
+      );
+    }
+    const stored = Array.isArray(body.medals)
+      ? { ...body, medals: body.medals.map((medal, index) => ({ ...medal, id: 1000 + index })) }
+      : body;
+    setState(id, { patch: { ...STATE.get(id)?.patch, ...stored } });
+    return HttpResponse.json(currentDetail(id));
+  }),
   http.delete(apiUrl("/api/v1/challenges/:challengeId"), ({ params }) => {
     const id = Number(params.challengeId);
     const detail = currentDetail(id);
@@ -125,7 +203,7 @@ export const challengeHandlers = [
       return conflict("challenge_not_draft", "Only a draft can be deleted.");
     }
     if (id === 12) return HttpResponse.json(fixtures.challenges.errorInUse, { status: 409 });
-    STATE.set(id, { deleted: true });
+    setState(id, { deleted: true });
     return new HttpResponse(null, { status: 204 });
   }),
   http.post(apiUrl("/api/v1/challenges/:challengeId/publish"), ({ params }) => {
@@ -138,16 +216,19 @@ export const challengeHandlers = [
         "A draft needs a cover image, a description and at least one medal.",
       );
     }
-    STATE.set(id, { status: "published" });
+    setState(id, { status: "published" });
     return HttpResponse.json({ ...challenge, id, status: "published" });
   }),
   http.post(apiUrl("/api/v1/challenges/:challengeId/unpublish"), ({ params }) => {
     const id = Number(params.challengeId);
     if (!currentDetail(id)) return notFound();
-    STATE.set(id, { status: "draft" });
+    setState(id, { status: "draft" });
     return HttpResponse.json({ ...challenge, id, status: "draft" });
   }),
-  http.get(apiUrl("/api/v1/quests"), () => HttpResponse.json([quest])),
+  // The quest the example challenges belong to, so a form finds it in the list.
+  http.get(apiUrl("/api/v1/quests"), () =>
+    HttpResponse.json([{ ...quest, id: challengeDetail.quest_id }]),
+  ),
   http.post(apiUrl("/api/v1/quests"), async ({ request }) => {
     const body = (await request.json()) as { title: string; description?: string };
     return HttpResponse.json(

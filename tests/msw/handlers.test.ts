@@ -191,3 +191,61 @@ describe("mock handlers", () => {
     });
   });
 });
+
+describe("mock handlers, editing a challenge", () => {
+  const patch = (id: number, body: object) =>
+    fetch(apiUrl(`/api/v1/challenges/${id}`), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const read = async (id: number) => (await fetch(apiUrl(`/api/v1/challenges/${id}`))).json();
+
+  it("saves the fields it was sent, and the next read shows them", async () => {
+    const response = await patch(7, { title: "New name", city: null });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ id: 7, title: "New name", city: null });
+    expect(await read(7)).toMatchObject({
+      title: "New name",
+      city: null,
+      landmark: "Hoan Kiem Lake",
+    });
+  });
+
+  it("takes the stored value sent again as no change, even where people joined", async () => {
+    const response = await patch(7, { target_value: 50000, starts_at: "2026-11-01T00:00:00.000Z" });
+
+    expect(response.status).toBe(200);
+  });
+
+  it("refuses a change to what people count toward with challenge_in_use", async () => {
+    const response = await patch(7, { target_value: 60000 });
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe("challenge_in_use");
+    expect((await read(7)).target_value).toBe(50000);
+  });
+
+  it("lets a draft that nobody joined change them", async () => {
+    const response = await patch(11, { target_value: 60000 });
+
+    expect(response.status).toBe(200);
+    expect((await read(11)).target_value).toBe(60000);
+  });
+
+  it("refuses a published challenge that would lose its cover with challenge_not_publishable", async () => {
+    const response = await patch(7, { cover_image_url: null });
+
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe("challenge_not_publishable");
+  });
+
+  it("answers challenge_not_found, and the backend's field errors for a backend-error title", async () => {
+    expect((await patch(404, { title: "x" })).status).toBe(404);
+
+    const response = await patch(11, { title: "Backend-Error" });
+    expect(response.status).toBe(422);
+    expect((await response.json()).error.fields[0].field).toBe("title");
+  });
+});

@@ -10,7 +10,7 @@ The backend (FastAPI) and the mobile app live in [`claude-code-training`](https:
 
 ## Status
 
-The Next.js app and its tooling (issue #2), and the API contract, typed client, error mapping and mock mode (issue #3) are in place; the home page is a placeholder. Admin sign in and sign out with the route guard (issue #4), the sidebar layout and the challenge list (issue #5) are in place; the form that creates a challenge (issue #6) are in place; the challenge page with publish, unpublish and delete (issue #7) are in place; editing a challenge (issue #8) comes next.
+The Next.js app and its tooling (issue #2), and the API contract, typed client, error mapping and mock mode (issue #3) are in place; the home page is a placeholder. Admin sign in and sign out with the route guard (issue #4), the sidebar layout and the challenge list (issue #5) are in place; the form that creates a challenge (issue #6) are in place; the challenge page with publish, unpublish and delete (issue #7) and editing a challenge (issue #8) are in place.
 
 ## Requirements
 
@@ -64,7 +64,11 @@ Sign in is `/login`: the form calls the `signIn` Server Action, which calls `POS
 
 ## New challenge form
 
-`/challenges/new` creates a draft. The form checks the contract's rules before it sends anything (`features/challenges/request-schema.ts`, tested against `contract/examples`), the Server Action checks them again, and the backend's own `fields` land on the matching form fields. A distance (swim, cycle) is typed in km and sent as metres; times are typed in the browser's timezone. Images (the cover, and one per medal) are checked for type and size (JPEG, PNG or WebP, at most 5 MB), then uploaded through a Server Action to `POST /images`; `serverActions.bodySizeLimit` is `6mb` in `next.config.ts` for that. The description preview is a small Markdown reader that never produces HTML. "New quest" creates a quest and selects it. After "Create draft" the person is sent to `/challenges/{id}`, which arrives with issue #7.
+`/challenges/new` creates a draft. The form checks the contract's rules before it sends anything (`features/challenges/request-schema.ts`, tested against `contract/examples`), the Server Action checks them again, and the backend's own `fields` land on the matching form fields. A distance (swim, cycle) is typed in km and sent as metres; times are typed in the browser's timezone. Images (the cover, and one per medal) are checked for type and size (JPEG, PNG or WebP, at most 5 MB), then uploaded through a Server Action to `POST /images`; `serverActions.bodySizeLimit` is `6mb` in `next.config.ts` for that. The description preview is a small Markdown reader that never produces HTML. "New quest" creates a quest and selects it. After "Create draft" the person is sent to `/challenges/{id}`.
+
+## Edit a challenge
+
+`/challenges/{id}/edit` reuses the create form, filled with what is saved (times in the browser's timezone). It sends only the fields that changed (`PATCH`); a cover, city or landmark that was emptied is sent as `null`, and nothing changed is not sent at all. The same rules run as on create, plus: a published challenge keeps its cover, description and at least one medal (the form says so before asking the backend; `challenge_not_publishable` is still handled). Once anyone has joined (`participant_count > 0`), the type, target, dates and medals are shown read-only with a note, and `challenge_in_use` is still handled for a runner who joins while the form is open. In mock mode, challenge 7 is published with 813 people, 11 is a draft nobody joined, and edits are remembered until the server restarts.
 
 ## End-to-end tests
 
