@@ -2,7 +2,7 @@
 
 Status: approved
 Approved: 2026-10-20
-Issues: <filled in after approval>
+Issues: #1, #2, #3, #4, #5, #6, #7, #8 (plan issues 1 to 8, in order)
 
 ## Context
 
