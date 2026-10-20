@@ -28,3 +28,10 @@ export async function getCurrentAdmin(): Promise<AdminUser> {
   if (result.data.role !== "admin") redirect("/login");
   return result.data;
 }
+
+/** The access token for a call to the backend, or the sign-in page when there is none. */
+export async function requireAccessToken(): Promise<string> {
+  const { access } = await getTokens();
+  if (!access) redirect("/login");
+  return access;
+}

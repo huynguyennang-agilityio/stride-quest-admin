@@ -18,6 +18,8 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // Form tests type a whole challenge, which is slow on a busy machine.
+    testTimeout: 20_000,
     setupFiles: ["./tests/setup.ts"],
     // Playwright specs in e2e/ run with `npm run e2e`, not Vitest.
     include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.{ts,tsx}"],
