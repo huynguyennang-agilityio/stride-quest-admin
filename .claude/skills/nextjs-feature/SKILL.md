@@ -50,7 +50,7 @@ src/app/(admin)/challenges/
 
 - **Reads** (`queries.ts`): plain async functions used by Server Components. Search, filters and the cursor come from the URL's search params.
 - **Writes** (`actions.ts`, `"use server"`): validate with the zod schema again, call the API, return `{ ok: true, data } | { ok: false, error: { code, message, fields } }`, then `revalidatePath` what changed. Never throw an API error to the client, and never return a token.
-- A `401 token_expired` or `invalid_token` redirects to `/login`; don't refresh here (only `middleware.ts` does).
+- A `401 token_expired` or `invalid_token` redirects to `/login`; don't refresh here (only `src/proxy.ts` does).
 
 ### 4. Components and page
 

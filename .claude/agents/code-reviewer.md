@@ -33,7 +33,7 @@ Always read enough surrounding context to judge a change — the callers, the ty
    - a token or the raw `Authorization` header reaching a client component, the browser, a log or an error message;
    - a session cookie without `HttpOnly`, `SameSite=Lax`, or `Secure` in production;
    - code outside `src/lib/api/` calling FastAPI, or `src/lib/api/client.ts` without `import "server-only"`;
-   - a second place that refreshes tokens besides `src/middleware.ts`;
+   - a second place that refreshes tokens besides `src/proxy.ts`;
    - a page under `(admin)` reachable without a session, or a sign-in that lets a `role = user` account through;
    - a `next` redirect that accepts an absolute URL (open redirect);
    - rendering Markdown or API text as HTML (XSS), unvalidated form input, secrets or keys in source.

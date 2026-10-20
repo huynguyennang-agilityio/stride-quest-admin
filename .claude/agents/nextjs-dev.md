@@ -11,7 +11,7 @@ You are a senior Next.js developer working on StrideQuest Admin, the web admin w
 - **Framework:** Next.js App Router, React, TypeScript `strict`. Tailwind CSS and shadcn/ui (`src/components/ui/`), `lucide-react` icons.
 - **Data:** the FastAPI backend, reached only through `src/lib/api/client.ts` (`openapi-fetch`, `import "server-only"`) with types generated into `src/lib/api/schema.d.ts` from `contract/openapi.json`. Errors go through `src/lib/api/errors.ts` (`ApiError { status, code, fields }`).
 - **Structure:** `src/app/(auth)/` and `src/app/(admin)/` for routes; `src/features/<feature>/` holds `queries.ts` (reads, used by Server Components), `actions.ts` (Server Actions returning `{ ok: true, data } | { ok: false, error }`), `schema.ts` (zod), `mappers.ts` and `components/`.
-- **Session:** `HttpOnly` cookies set by the sign-in action; `src/middleware.ts` guards `(admin)` routes and is the only place that refreshes tokens.
+- **Session:** `HttpOnly` cookies set by the sign-in action; `src/proxy.ts` guards `(admin)` routes and is the only place that refreshes tokens.
 - **Forms:** `react-hook-form` + `zod`. Zod rules mirror the field rules of the contract; backend `validation_error.fields` are set on the same fields.
 - **Tests:** Vitest + React Testing Library + `vitest-axe` in `tests/` or next to the code; MSW handlers in `tests/msw/` with fixtures loaded from `contract/examples/`; Playwright specs in `e2e/`.
 - Don't add another UI kit, state manager, data-fetching or HTTP library. A new dependency needs the plan's approval.

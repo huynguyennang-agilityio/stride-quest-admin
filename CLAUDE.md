@@ -28,7 +28,7 @@ src/features/<feature>/         actions.ts, queries.ts, schema.ts, mappers.ts, c
 src/lib/api/                    client.ts (server-only), schema.d.ts (generated), errors.ts
 src/lib/config.ts               environment, validated with zod
 src/components/ui/              shadcn/ui components
-src/middleware.ts               route guard and token refresh
+src/proxy.ts                    route guard and token refresh (Next.js 16 name for middleware; Node.js runtime)
 tests/fixtures/                 loaded from contract/examples, never hand-written copies
 tests/msw/                      MSW handlers per module
 e2e/                            Playwright specs
@@ -40,7 +40,7 @@ e2e/                            Playwright specs
 - **Server-only API.** Only `src/lib/api/` talks to FastAPI, and `client.ts` starts with `import "server-only"`. Components and client code never `fetch` the backend.
 - **Reads and writes.** Reads run in Server Components through `features/<feature>/queries.ts`. Writes run in Server Actions in `features/<feature>/actions.ts`; they return a typed result (`{ ok: true, data } | { ok: false, error }`) and call `revalidatePath` after a change.
 - **Features.** A feature imports another feature only through that feature's exported queries, actions or components, never its internals.
-- **Session.** The access and refresh tokens live in `HttpOnly` cookies (`SameSite=Lax`, `Secure` in production). Only `src/middleware.ts` refreshes tokens, once per request, so two calls never rotate the same refresh token. Other server code that gets `401 token_expired` or `invalid_token` redirects to `/login`. Only accounts with `role = admin` may sign in; the backend still enforces `admin` on every write route.
+- **Session.** The access and refresh tokens live in `HttpOnly` cookies (`SameSite=Lax`, `Secure` in production). Only `src/proxy.ts` refreshes tokens, once per request, so two calls never rotate the same refresh token. Other server code that gets `401 token_expired` or `invalid_token` redirects to `/login`. Only accounts with `role = admin` may sign in; the backend still enforces `admin` on every write route.
 - **Errors.** Branch on `error.code` of the `ErrorResponse`, never on `message`. `src/lib/api/errors.ts` turns it into an `ApiError { status, code, fields }`. `validation_error.fields` land on the matching form fields. Show messages written for people, never raw exception text.
 - **Types.** API types come from the generated `src/lib/api/schema.d.ts`; no hand-written copies. Zod form schemas mirror the contract's field rules and are tested against the contract examples.
 - **Mock mode.** `API_MODE=mock` (development only) serves the contract fixtures through MSW, so screens work without the backend. The default is `real`.
