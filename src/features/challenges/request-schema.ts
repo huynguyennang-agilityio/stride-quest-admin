@@ -34,12 +34,12 @@ const optionalText = (what: string) =>
     .regex(ONE_LINE, `${what} must be on one line.`)
     .optional();
 
-const markdown = (what: string) =>
+const markdownText = (what: string) =>
   z
     .string()
     .max(20_000, `${what} must be 20,000 characters or fewer.`)
-    .regex(NO_NUL, `${what} can't contain a NUL character.`)
-    .default("");
+    .regex(NO_NUL, `${what} can't contain a NUL character.`);
+const markdown = (what: string) => markdownText(what).default("");
 
 const isoWithZone = (what: string) =>
   z.iso.datetime({ offset: true, error: `${what} must be a date and time with a timezone.` });
@@ -62,25 +62,56 @@ export const medalRequestSchema = z.object({
   image_url: url("The medal image"),
 });
 
+const titleField = z
+  .string()
+  .trim()
+  .min(1, "Enter a title.")
+  .max(120, "The title must be 120 characters or fewer.")
+  .regex(ONE_LINE, "The title must be on one line.");
+const typeField = z.enum(CHALLENGE_TYPES, { error: "Pick a type." });
+const targetField = amount("The target");
+const startsField = isoWithZone("The start");
+const endsField = isoWithZone("The end");
+const questField = z.number().int().positive();
+const coverField = url("The cover image");
+const medalsField = z.array(medalRequestSchema).max(3, "A challenge has at most three medals.");
+
+/**
+ * The fields a challenge sent to `PATCH` may carry. What is left out stays; `null` clears
+ * the cover, the city and the landmark. The rules between fields (medals against the target,
+ * the end after the start) depend on stored values the patch may not repeat, so the form
+ * checks them on the whole form and the backend on the result.
+ */
+export const updateChallengeSchema = z.object({
+  title: titleField.optional(),
+  type: typeField.optional(),
+  target_value: targetField.optional(),
+  starts_at: startsField.optional(),
+  ends_at: endsField.optional(),
+  quest_id: questField.optional(),
+  description_md: markdownText("The description").optional(),
+  terms_md: markdownText("The terms").optional(),
+  cover_image_url: coverField.nullable().optional(),
+  city: optionalText("The city").nullable(),
+  landmark: optionalText("The landmark").nullable(),
+  medals: medalsField.optional(),
+});
+export type UpdateChallengeRequest = z.infer<typeof updateChallengeSchema>;
+
 export const createChallengeSchema = z
   .object({
-    title: z
-      .string()
-      .trim()
-      .min(1, "Enter a title.")
-      .max(120, "The title must be 120 characters or fewer.")
-      .regex(ONE_LINE, "The title must be on one line."),
-    type: z.enum(CHALLENGE_TYPES, { error: "Pick a type." }),
-    target_value: amount("The target"),
-    starts_at: isoWithZone("The start"),
-    ends_at: isoWithZone("The end"),
-    quest_id: z.number().int().positive().optional(),
+    title: titleField,
+    type: typeField,
+    target_value: targetField,
+    starts_at: startsField,
+    ends_at: endsField,
+    quest_id: questField.optional(),
     description_md: markdown("The description"),
     terms_md: markdown("The terms"),
-    cover_image_url: url("The cover image").optional(),
+    cover_image_url: coverField.optional(),
     city: optionalText("The city"),
     landmark: optionalText("The landmark"),
-    medals: z.array(medalRequestSchema).max(3, "A challenge has at most three medals."),
+    medals: medalsField,
   })
   .superRefine((challenge, ctx) => {
     if (

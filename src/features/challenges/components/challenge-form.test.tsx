@@ -11,7 +11,7 @@ import type { ActionResult } from "@/lib/action-result";
 import { createChallenge } from "../actions";
 import { ChallengeForm } from "./challenge-form";
 
-vi.mock("../actions", () => ({ createChallenge: vi.fn() }));
+vi.mock("../actions", () => ({ createChallenge: vi.fn(), updateChallenge: vi.fn() }));
 vi.mock("@/features/images/actions", () => ({ uploadImage: vi.fn() }));
 vi.mock("@/features/quests/actions", () => ({ createQuest: vi.fn() }));
 

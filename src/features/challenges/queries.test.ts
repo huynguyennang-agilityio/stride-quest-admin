@@ -5,7 +5,7 @@ import { apiUrl } from "@tests/msw/url";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getChallenge, listChallenges } from "./queries";
+import { getChallenge, getChallengeToEdit, listChallenges } from "./queries";
 
 let accessCookie: string | undefined;
 const redirect = vi.fn((url: string) => {
@@ -279,5 +279,66 @@ describe("getChallenge", () => {
     accessCookie = undefined;
 
     await expect(getChallenge("7", quests)).rejects.toThrow("NEXT_REDIRECT /login");
+  });
+});
+
+describe("getChallengeToEdit", () => {
+  const detail = fixtures.challenges.challengeDetail;
+  const answer = (status: number, body: object) =>
+    server.use(http.get(apiUrl("/api/v1/challenges/7"), () => HttpResponse.json(body, { status })));
+  const error = (code: string) => ({ error: { code, message: "x", fields: [] } });
+
+  it("returns the challenge as stored, calling the backend with the access token", async () => {
+    let authorization: string | null = null;
+    server.use(
+      http.get(apiUrl("/api/v1/challenges/7"), ({ request }) => {
+        authorization = request.headers.get("Authorization");
+        return HttpResponse.json(detail);
+      }),
+    );
+
+    expect(await getChallengeToEdit("7")).toMatchObject({
+      id: 7,
+      title: "Hoan Kiem 50K Steps",
+      starts_at: "2026-11-01T00:00:00Z",
+      participant_count: 813,
+    });
+    expect(authorization).toBe("Bearer access-token");
+  });
+
+  it("shows the not-found page for challenge_not_found", async () => {
+    answer(404, error("challenge_not_found"));
+
+    await expect(getChallengeToEdit("7")).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it.each(["abc", "0", "99999999999"])(
+    "shows the not-found page for the id %j without calling the backend",
+    async (id) => {
+      let calls = 0;
+      server.use(
+        http.get(apiUrl("/api/v1/challenges/:id"), () => {
+          calls += 1;
+          return HttpResponse.json(detail);
+        }),
+      );
+
+      await expect(getChallengeToEdit(id)).rejects.toThrow("NEXT_NOT_FOUND");
+      expect(calls).toBe(0);
+    },
+  );
+
+  it("goes to /login on 401, and without an access cookie", async () => {
+    answer(401, error("token_expired"));
+    await expect(getChallengeToEdit("7")).rejects.toThrow("NEXT_REDIRECT /login");
+
+    accessCookie = undefined;
+    await expect(getChallengeToEdit("7")).rejects.toThrow("NEXT_REDIRECT /login");
+  });
+
+  it("throws other errors for the error page", async () => {
+    answer(500, error("internal_error"));
+
+    await expect(getChallengeToEdit("7")).rejects.toMatchObject({ status: 500 });
   });
 });

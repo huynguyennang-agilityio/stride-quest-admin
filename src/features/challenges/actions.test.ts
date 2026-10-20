@@ -5,7 +5,7 @@ import { apiUrl } from "@tests/msw/url";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createChallenge } from "./actions";
+import { createChallenge, updateChallenge } from "./actions";
 import { createChallengeSchema, type CreateChallengeRequest } from "./request-schema";
 
 let accessCookie: string | undefined;
@@ -182,6 +182,182 @@ describe("createChallenge", () => {
     const received = backendAnswers(201, created);
 
     await expect(createChallenge(example)).rejects.toThrow("NEXT_REDIRECT /login");
+    expect(received.body).toBeUndefined();
+  });
+});
+
+function patchAnswers(status: number, body: object) {
+  const received: { body?: unknown; authorization?: string | null; id?: string } = {};
+  server.use(
+    http.patch(apiUrl("/api/v1/challenges/:challengeId"), async ({ request, params }) => {
+      received.body = await request.json();
+      received.authorization = request.headers.get("Authorization");
+      received.id = String(params.challengeId);
+      return HttpResponse.json(body, { status });
+    }),
+  );
+  return received;
+}
+
+describe("updateChallenge", () => {
+  const update = fixtures.challenges.challengeUpdateRequest;
+
+  it("sends the changed fields with the access token, then goes back to the challenge", async () => {
+    const received = patchAnswers(200, created);
+
+    await expect(updateChallenge("7", update)).rejects.toThrow("NEXT_REDIRECT /challenges/7");
+
+    expect(received.id).toBe("7");
+    expect(received.authorization).toBe("Bearer access-token");
+    expect(received.body).toEqual(update);
+    expect(revalidatePath).toHaveBeenCalledWith("/challenges");
+    expect(revalidatePath).toHaveBeenCalledWith("/challenges/7");
+  });
+
+  it("keeps null, which clears the cover, the city and the landmark", async () => {
+    const received = patchAnswers(200, created);
+
+    await expect(
+      updateChallenge("7", { cover_image_url: null, city: null, landmark: null }),
+    ).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(received.body).toEqual({ cover_image_url: null, city: null, landmark: null });
+  });
+
+  it("checks the body before calling the backend, keyed by form field", async () => {
+    const received = patchAnswers(200, created);
+
+    const result = await updateChallenge("7", {
+      title: "",
+      target_value: 0,
+      city: "",
+      medals: [{ ...example.medals[0], name: "" }],
+    });
+
+    expect(received.body).toBeUndefined();
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "validation_error",
+        message: "Check the highlighted fields and try again.",
+        fields: {
+          title: "Enter a title.",
+          target: "The target must be at least 1.",
+          city: "The city can't be empty. Leave it out instead.",
+          "medals.bronze.name": "Give the medal a name.",
+        },
+      },
+    });
+  });
+
+  it("answers challenge_not_found for an id that can't be one, without calling the backend", async () => {
+    const received = patchAnswers(200, created);
+
+    expect(await updateChallenge("abc", update)).toMatchObject({
+      ok: false,
+      error: { code: "challenge_not_found" },
+    });
+    expect(received.body).toBeUndefined();
+  });
+
+  it("maps the backend's validation_error fields to form fields", async () => {
+    patchAnswers(422, {
+      error: {
+        code: "validation_error",
+        message: "Request is invalid.",
+        fields: [
+          { field: "medals.0.threshold_value", message: "Gold must be earned at the target." },
+          { field: "ends_at", message: "It must end after it starts." },
+        ],
+      },
+    });
+
+    const result = await updateChallenge("7", {
+      target_value: 60000,
+      medals: [example.medals[1]],
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        code: "validation_error",
+        fields: {
+          "medals.gold.threshold": "Gold must be earned at the target.",
+          endsAt: "It must end after it starts.",
+        },
+      },
+    });
+  });
+
+  it.each([
+    [
+      409,
+      fixtures.challenges.errorInUse,
+      "challenge_in_use",
+      "People have joined this challenge, so its type, target, dates and medals can’t change. Reload the page to see what is saved.",
+    ],
+    [
+      409,
+      {
+        error: { code: "challenge_not_publishable", message: "Needs a cover.", fields: [] },
+      },
+      "challenge_not_publishable",
+      "A published challenge needs a cover image, a description and at least one medal. Unpublish it first to remove them.",
+    ],
+    [
+      404,
+      { error: { code: "challenge_not_found", message: "No challenge.", fields: [] } },
+      "challenge_not_found",
+      "This challenge no longer exists. It may have been deleted by someone else.",
+    ],
+    [403, fixtures.challenges.errorForbidden, "forbidden", "This account can’t change challenges."],
+    [
+      500,
+      { error: { code: "internal_error", message: "Traceback: KeyError", fields: [] } },
+      "internal_error",
+      "The changes couldn’t be saved. Try again.",
+    ],
+  ])(
+    "shows our message for a %i %s, never the backend's text",
+    async (status, body, code, message) => {
+      patchAnswers(status, body);
+
+      const result = await updateChallenge("7", update);
+
+      expect(result).toEqual({ ok: false, error: { code, message, fields: {} } });
+    },
+  );
+
+  it("answers quest_not_found on the quest field", async () => {
+    patchAnswers(404, {
+      error: { code: "quest_not_found", message: "No quest has id 99.", fields: [] },
+    });
+
+    expect(await updateChallenge("7", { quest_id: 99 })).toMatchObject({
+      ok: false,
+      error: {
+        code: "quest_not_found",
+        fields: { questId: "That quest no longer exists. Pick another." },
+      },
+    });
+  });
+
+  it("answers network_error when the backend can't be reached", async () => {
+    server.use(http.patch(apiUrl("/api/v1/challenges/:challengeId"), () => HttpResponse.error()));
+
+    expect(await updateChallenge("7", update)).toMatchObject({
+      ok: false,
+      error: { code: "network_error" },
+    });
+  });
+
+  it("goes to /login on 401, and without an access cookie, without calling the backend", async () => {
+    patchAnswers(401, { error: { code: "token_expired", message: "x", fields: [] } });
+    await expect(updateChallenge("7", update)).rejects.toThrow("NEXT_REDIRECT /login");
+
+    accessCookie = undefined;
+    const received = patchAnswers(200, created);
+    await expect(updateChallenge("7", update)).rejects.toThrow("NEXT_REDIRECT /login");
     expect(received.body).toBeUndefined();
   });
 });

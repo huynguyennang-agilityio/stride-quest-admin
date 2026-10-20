@@ -8,6 +8,7 @@ import { request } from "@/lib/api/errors";
 
 import { toRow, type ChallengeRow } from "./mappers";
 import { parseChallengeId, toDetail, type DetailView } from "./detail";
+import type { EditableChallenge } from "./edit";
 import type { ChallengeListParams } from "./schema";
 
 const PAGE_SIZE = 20;
@@ -91,4 +92,26 @@ export async function getChallenge(
     throw error;
   }
   return toDetail(result.data, quests);
+}
+
+/**
+ * One challenge for its edit form, as stored. Rules of `getChallenge` for a missing id and
+ * for a 401.
+ */
+export async function getChallengeToEdit(idParam: string): Promise<EditableChallenge> {
+  const id = parseChallengeId(idParam);
+  if (id === null) notFound();
+
+  const result = await request(
+    apiClient(await requireAccessToken()).GET("/api/v1/challenges/{challenge_id}", {
+      params: { path: { challenge_id: id } },
+    }),
+  );
+  if (!result.ok) {
+    const { error } = result;
+    if (error.status === 401) redirect("/login");
+    if (error.code === "challenge_not_found") notFound();
+    throw error;
+  }
+  return result.data;
 }

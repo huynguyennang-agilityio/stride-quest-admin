@@ -1,9 +1,17 @@
+import { createContext, useContext } from "react";
 import { get, useFormContext } from "react-hook-form";
 
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 import type { ChallengeFormValues } from "../form";
+
+/**
+ * True while people are in the challenge: its type, target, dates and medals are what they
+ * count toward, so the form shows them and doesn't let them change.
+ */
+export const FrozenContext = createContext(false);
+export const useFrozen = () => useContext(FrozenContext);
 
 export function Section({
   title,
