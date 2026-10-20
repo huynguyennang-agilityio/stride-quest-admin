@@ -18,6 +18,9 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "playwright-report/**",
     "test-results/**",
+    // Copied from claude-code-training or generated from it:
+    "contract/**",
+    "src/lib/api/schema.d.ts",
   ]),
 ]);
 

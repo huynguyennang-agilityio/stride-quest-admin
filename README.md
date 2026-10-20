@@ -10,7 +10,7 @@ The backend (FastAPI) and the mobile app live in [`claude-code-training`](https:
 
 ## Status
 
-The Next.js app and its tooling are scaffolded (issue #2): the home page is a placeholder. The API client and contract (issue #3), sign in (issue #4) and the challenge screens (issues #5–#8) come next.
+The Next.js app and its tooling (issue #2), and the API contract, typed client, error mapping and mock mode (issue #3) are in place; the home page is a placeholder. Sign in (issue #4) and the challenge screens (issues #5–#8) come next.
 
 ## Requirements
 
@@ -30,7 +30,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The app runs on <http://localhost:3000>. `.env.local` holds `API_BASE_URL` (the backend API base, including `/api/v1`) and `API_MODE` (`real`, or `mock` in development to serve the contract fixtures). Never commit `.env.local`.
+The app runs on <http://localhost:3000>. `.env.local` holds `API_BASE_URL` (the backend server root, such as `http://localhost:8000`; the contract's paths already start with `/api/v1`) and `API_MODE` (`real`, or `mock` in development to serve the contract fixtures). Never commit `.env.local`.
 
 Dependency versions are pinned (`.npmrc` sets `save-exact`). Install from the lockfile with `npm ci`. When you add or upgrade a dependency on Node 20.12, its bundled npm 10.5 can fail with `Cannot read properties of null (reading 'edgesOut')`; run that install with a newer npm instead, for example `npx -y npm@10.9.4 install -D <package>@<version>`.
 
@@ -44,7 +44,21 @@ Dependency versions are pinned (`.npmrc` sets `save-exact`). Install from the lo
 | `npm run format`, `npm run format:check` | Prettier write or check (Markdown is not formatted) |
 | `npm run typecheck` | Generate Next.js route types, then `tsc --noEmit` |
 | `npm run test` | Vitest with React Testing Library and `vitest-axe` (`test:watch` to watch) |
+| `npm run contract:types` | Regenerate `src/lib/api/schema.d.ts` from `contract/openapi.json` |
+| `npm run contract:check` | Fail when `contract/SOURCE` is not a commit SHA or the generated types are stale |
 | `npm run e2e` | Playwright specs in `e2e/`, in the installed Chrome; starts `npm run dev` if nothing runs on port 3000 |
+
+## API contract and mock mode
+
+`contract/` is a copy of `docs/api/` from `claude-code-training` at the commit in `contract/SOURCE`. Never edit it by hand: update it with the full commit SHA, in its own PR (label `contract`):
+
+```bash
+scripts/sync-contract.sh <40-character sha>
+```
+
+The script replaces `contract/`, writes the SHA to `contract/SOURCE` and regenerates `src/lib/api/schema.d.ts`. Test fixtures (`tests/fixtures`) and the MSW handlers (`tests/msw`) load the examples from `contract/examples/`.
+
+With `API_MODE=mock` in `.env.local`, `npm run dev` starts MSW on the server (`src/instrumentation.ts`) and answers every API call with the contract examples, so the screens work without the backend. Sign in succeeds as an admin. Mock mode is refused in production.
 
 ## Stop hook for Claude
 
