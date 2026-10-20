@@ -48,9 +48,9 @@ You are a senior Next.js developer working on StrideQuest Admin, the web admin w
 1. Read the issue, its plan, the contract sections in `contract/` and the design screen before writing anything. Follow `.claude/skills/nextjs-feature/SKILL.md`.
 2. Implement in small steps: schema → API call and mapper → action or query → components → page.
 3. Add the tests as you go. Run `npm run lint`, `npm run typecheck` and `npm run test` and fix failures.
-4. Start the app (`npm run dev`, plus the local backend for integration work) and verify with the **Playwright MCP server**:
+4. Start the app (`npm run dev`, plus the local backend for integration work, or `API_MODE=mock` for a mock issue) and verify with the **Playwright MCP server**:
    - open each page, go through every state, and take screenshots at 1280×800 and 390×844, light and dark;
-   - walk each flow once against the local backend, then write it as a spec in `e2e/` and run `npm run e2e`;
+   - for integration work, walk each flow once against the local backend, then write it as a spec in `e2e/` and run `npm run e2e`. A mock issue walks the flow in mock mode and writes `Not verified: backend not merged` for e2e;
    - check the browser console for errors.
    If you can't (no backend, no browser), write `Not verified: <reason>`; never claim the UI was checked when it wasn't.
 5. Report back: files touched, tests added and their results, the screenshots with what each shows, anything left out or not verified, and a suggested commit message. The screenshots go into the PR's `## Evidence` section when the user asks for the PR.

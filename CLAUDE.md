@@ -17,6 +17,8 @@ The plan that set up this repo, with the architecture, the screens and the reaso
 
 ## Planned structure
 
+This is the target layout. Issue #2 scaffolds the app and its tooling, and issue #3 adds `contract/` and `src/lib/api/`; until then most of it doesn't exist.
+
 ```text
 contract/                       API contract copied from claude-code-training; SOURCE = its commit SHA
 scripts/sync-contract.sh        copies the contract at a given SHA and regenerates the API types
@@ -151,15 +153,17 @@ Build in small steps. For each step:
 4. Run type checks: `npm run typecheck`.
 5. Run the tests: `npm run test`.
 
+> **Until issue #2 is merged**, the Next.js app, the `npm run` scripts and the Stop hook below don't exist yet. Don't rely on the hook or report it as evidence before then. Remove this note in #2.
+
 A `Stop` hook (`.claude/hooks/check.sh`, set up in `.claude/settings.json`) runs lint, type check and unit tests when you changed files and tries to finish, and blocks until they pass. It skips the Playwright specs, which need the backend, so run `npm run e2e` yourself before Phase 4. After 3 failed stops in a row it lets you stop and warns the user.
 
 Passing tests don't prove everything works: Vitest doesn't show the page matches the design, and mocks don't show the app works against the backend. Also verify by ticket type:
 
 - **UI:** open the running app with the **Playwright MCP server**, go through the screen's states and take screenshots at 1280×800 and 390×844, light and dark. Compare them with the screen on the design canvas.
-- **Flow / integration:** walk the flow once with the Playwright MCP server against the local backend, then keep it as a Playwright spec in `e2e/` so `npm run e2e` repeats it.
+- **Flow / integration:** walk the flow once with the Playwright MCP server against the local backend, then keep it as a Playwright spec in `e2e/` so `npm run e2e` repeats it. On a `(web, mock)` issue, walk the flow in `API_MODE=mock` for the screenshots; the `e2e/` spec comes with the integration issue.
 - **Bug:** reproduce the bug before fixing it when feasible, then repeat the same steps after the fix.
 
-The Playwright MCP browser opens only `localhost` and signs in only with the local test admin from the project's seed or `.env.example`. Never use it on a shared or production environment, and never type a real password into it.
+Use the Playwright MCP browser only on `localhost`, and sign in only with the local test admin from the project's seed or `.env.example`. Never use it on a shared or production environment, and never type a real password into it. `.mcp.json` backs this up: `--isolated` keeps the browser profile in memory, so no session cookie is saved to disk, and `--allowed-origins` lets the browser request only the local app (`localhost:3000`) and Cloudinary images. Playwright says that list is not a security boundary, so the rule above still applies; add a new origin there only through a plan.
 
 Record what you ran and what you saw as verification evidence (below). If you can't run the app or the backend, say so plainly with a `Not verified: <reason>` line. Never claim the UI or a fix was verified when it wasn't.
 
@@ -190,7 +194,7 @@ If a piece of evidence can't be produced (no backend running, no Cloudinary sett
 Before opening a PR, confirm:
 
 1. **Acceptance criteria:** each criterion is met, and you can say how it was checked.
-2. **Regression:** `npm run lint`, `npm run typecheck`, `npm run test` and `npm run e2e` pass.
+2. **Regression:** `npm run lint`, `npm run typecheck` and `npm run test` pass. For integration work, `npm run e2e` passes against the local backend too. A `(web, mock)` issue has no backend to run e2e against: write `Not verified: backend not merged` instead.
 3. **Security:** no leaked secrets, inputs are validated, tokens stay on the server and authorization checks are in place.
 4. **Git diff:** `git diff develop...HEAD` contains only changes for this issue.
 5. **Evidence:** the drafted `## Evidence` section covers each acceptance criterion, with evidence or a `Not verified: <reason>` line, and has the Playwright screenshots for any UI change.

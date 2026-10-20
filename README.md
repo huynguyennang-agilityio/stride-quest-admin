@@ -44,4 +44,4 @@ sudo chown -R $(id -u):$(id -g) ~/.npm
 
 By default the server drives the installed Google Chrome; install Chrome if it is missing.
 
-The server opens only `localhost` in this project's workflow, and signs in only with a local test admin. Never use it on a shared or production environment.
+The server starts with `--isolated` (the browser profile stays in memory, so no session cookie is saved to disk) and `--allowed-origins` set to the local app (`http://localhost:3000`) and Cloudinary images. That list is a guardrail, not a security boundary: use the server only on `localhost`, sign in only with a local test admin, and never use it on a shared or production environment. If the dev server runs on another port, change the origin in `.mcp.json`.

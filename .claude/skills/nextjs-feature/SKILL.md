@@ -64,15 +64,15 @@ src/app/(admin)/challenges/
 
 - **Unit** (Vitest): schema, mappers, error messages.
 - **Component** (RTL + `vitest-axe`): each state renders, the main interaction works, no axe violations. Use the MSW handlers in `tests/msw/` with fixtures loaded from `contract/examples/`.
-- **Flow** (Playwright, `e2e/`): one spec per flow the issue names, against the local backend: one success case and each documented error the screen handles.
+- **Flow** (Playwright, `e2e/`), integration work only: one spec per flow the issue names, against the local backend: one success case and each documented error the screen handles. A `(web, mock)` issue writes no spec; its integration issue does.
 
 ## Verify with the Playwright MCP server
 
-Run `npm run lint`, `npm run typecheck`, `npm run test`. Then start the app (`npm run dev`, and the backend for integration work) and use the Playwright MCP server:
+Run `npm run lint`, `npm run typecheck`, `npm run test`. Then start the app (`npm run dev`, with the local backend for integration work or `API_MODE=mock` for a mock issue) and use the Playwright MCP server:
 
 1. Resize to 1280×800, open the page, and screenshot each state. Repeat at 390×844 and in dark mode.
-2. Walk the flow once against the local backend, signed in as the local test admin. Note what the page did and check the console for errors.
-3. Turn the walk-through into a spec in `e2e/` and run `npm run e2e`.
+2. Walk the flow once, signed in as the local test admin: against the local backend for integration work, in `API_MODE=mock` for a mock issue. Note what the page did and check the console for errors.
+3. Integration work only: turn the walk-through into a spec in `e2e/` and run `npm run e2e`. A mock issue writes `Not verified: backend not merged` instead.
 4. Put each screenshot next to the matching design screen and check they agree.
 
 Open only `localhost`, and never type a real password. If something can't be checked, write `Not verified: <reason>`.
@@ -84,5 +84,5 @@ Open only `localhost`, and never type a real password. If something can't be che
 - [ ] Every documented error code has a message for people.
 - [ ] Every named state is built and tested, with an axe check.
 - [ ] Playwright MCP screenshots at both sizes, light and dark, ready for the PR's `## Evidence`.
-- [ ] Each flow has an `e2e/` spec, and `npm run e2e` passes.
+- [ ] Integration work: each flow has an `e2e/` spec, and `npm run e2e` passes. Mock issue: `Not verified: backend not merged`.
 - [ ] `npm run lint`, `npm run typecheck`, `npm run test` pass.

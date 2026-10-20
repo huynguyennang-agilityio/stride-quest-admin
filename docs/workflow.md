@@ -25,7 +25,7 @@ flowchart TD
     G2 -- yes --> PLAN
     G2 -- no --> P3
     P3["Phase 3: Small steps<br/>code → tests → lint → type check<br/>+ Playwright MCP: walk the flow, screenshots<br/>Stop hook reruns the checks"] --> G4
-    G4{"Phase 4 gate:<br/>criteria met, all checks and e2e pass,<br/>security ok, diff in scope,<br/>evidence with screenshots drafted?"}
+    G4{"Phase 4 gate:<br/>criteria met, lint, types and tests pass,<br/>e2e passes (integration work only),<br/>security ok, diff in scope,<br/>evidence with screenshots drafted?"}
     G4 -- no --> P3
     G4 -- yes --> P5["Phase 5, when the user asks:<br/>first time: push, open PR into develop,<br/>Closes #id, Plan: link, deviations,<br/>Playwright screenshots in the description<br/>after review: push fixes to the same PR"]
     P5 --> REV["code-reviewer runs automatically<br/>when the PR is opened"]
