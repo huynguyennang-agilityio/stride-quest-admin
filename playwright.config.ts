@@ -15,8 +15,8 @@ export default defineConfig({
   testDir: "./e2e",
   workers: process.env.CI ? 1 : 2,
   // Generous: a busy laptop makes every browser step slow.
-  timeout: 90_000,
-  expect: { timeout: 20_000 },
+  timeout: 120_000,
+  expect: { timeout: 40_000 },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

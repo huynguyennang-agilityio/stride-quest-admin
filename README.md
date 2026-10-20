@@ -10,7 +10,7 @@ The backend (FastAPI) and the mobile app live in [`claude-code-training`](https:
 
 ## Status
 
-The Next.js app and its tooling (issue #2), and the API contract, typed client, error mapping and mock mode (issue #3) are in place; the home page is a placeholder. Admin sign in and sign out with the route guard (issue #4) are in place; the challenge screens (issues #5–#8) come next.
+The Next.js app and its tooling (issue #2), and the API contract, typed client, error mapping and mock mode (issue #3) are in place; the home page is a placeholder. Admin sign in and sign out with the route guard (issue #4), the sidebar layout and the challenge list (issue #5) are in place; creating, viewing and editing a challenge (issues #6–#8) come next.
 
 ## Requirements
 
@@ -54,6 +54,10 @@ Sign in is `/login`: the form calls the `signIn` Server Action, which calls `POS
 
 [`src/proxy.ts`](src/proxy.ts) (Next.js 16's name for middleware) guards every page but `/login` and is the only place that refreshes the tokens. The access cookie expires a minute before the token does; when it is gone the proxy swaps the refresh token for a new pair, once per refresh token even for parallel requests (in one server process). A page that still gets `401` from the backend sends the person to `/login`. The `next` parameter of `/login` is followed only when it is a relative path inside the app.
 
+## Challenge list
+
+`/challenges` shows the Published and Drafts tabs (`status`), a type filter (`type`), a search (`q`, at most 100 characters, debounced) and "Load more" (`cursor`); all of it is in the URL, so a view can be shared. "Load more" adds the next page to the ones on screen: the server reads the pages up to the cursor of the URL, and a cursor it never gave starts again from the first page. Dates are shown in the browser's timezone (UTC on the first render).
+
 ## End-to-end tests
 
 `npm run e2e` runs [`e2e/`](e2e/) against the app and the **local** backend (never a shared or production one). It needs a local admin account. Sign one up in the app or through the API, make it an admin on the backend (`backend/` of `claude-code-training`, virtualenv active), and put its credentials in the git-ignored `.env.local`:
@@ -79,7 +83,7 @@ scripts/sync-contract.sh <40-character sha>
 
 The script replaces `contract/`, writes the SHA to `contract/SOURCE` and regenerates `src/lib/api/schema.d.ts`. Test fixtures (`tests/fixtures`) and the MSW handlers (`tests/msw`) load the examples from `contract/examples/`.
 
-With `API_MODE=mock` in `.env.local`, `npm run dev` starts MSW on the server (`src/instrumentation.ts`) and answers every API call with the contract examples, so the screens work without the backend. Sign in succeeds as an admin. Mock mode is refused in production.
+With `API_MODE=mock` in `.env.local`, `npm run dev` starts MSW on the server (`src/instrumentation.ts`) and answers every API call with the contract examples, so the screens work without the backend. Sign in succeeds as an admin, the list answers with the two example challenges (a second page behind "Load more", filters on type and search), a search for `slow` keeps the list loading for a minute, and a search for `server-error` shows its error state. Mock mode is refused in production.
 
 ## Stop hook for Claude
 

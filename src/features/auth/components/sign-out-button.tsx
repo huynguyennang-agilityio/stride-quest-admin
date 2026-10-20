@@ -7,7 +7,12 @@ import { signOut } from "../actions";
 export function SignOutButton() {
   return (
     <form action={signOut}>
-      <Button type="submit" variant="ghost" size="sm">
+      <Button
+        type="submit"
+        variant="ghost"
+        size="sm"
+        className="text-[#d5ddcb] hover:bg-[#1d2418] hover:text-white"
+      >
         <LogOut />
         Sign out
       </Button>

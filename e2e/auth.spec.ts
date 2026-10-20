@@ -1,31 +1,15 @@
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-// These run against the app and the LOCAL backend (claude-code-training). They need a local
-// admin account made with `python -m app.scripts.create_admin`; see the README. The
-// non-admin account is signed up through the API with a fresh email each time.
-const API = `${process.env.API_BASE_URL ?? "http://localhost:8000"}/api/v1`;
-const adminEmail = process.env.E2E_ADMIN_EMAIL;
-const adminPassword = process.env.E2E_ADMIN_PASSWORD;
+import {
+  adminEmail,
+  adminPassword,
+  API,
+  requireAdminAccount,
+  sessionCookies,
+  signInAsAdmin,
+} from "./helpers";
 
-test.skip(
-  !adminEmail || !adminPassword,
-  "Set E2E_ADMIN_EMAIL and E2E_ADMIN_PASSWORD to a local admin account (README).",
-);
-
-async function signInAsAdmin(page: Page, path = "/login") {
-  await page.goto(path);
-  await page.getByLabel("Email", { exact: true }).fill(adminEmail!);
-  await page.getByLabel("Password", { exact: true }).fill(adminPassword!);
-  await page.getByRole("button", { name: "Sign in" }).click();
-}
-
-async function sessionCookies(context: BrowserContext) {
-  const cookies = await context.cookies();
-  return {
-    access: cookies.find((cookie) => cookie.name === "sq_access"),
-    refresh: cookies.find((cookie) => cookie.name === "sq_refresh"),
-  };
-}
+requireAdminAccount();
 
 test.describe("sign in", () => {
   test("an admin lands on the challenges and the session cookies are HttpOnly", async ({

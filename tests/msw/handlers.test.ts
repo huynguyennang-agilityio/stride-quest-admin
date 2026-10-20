@@ -36,4 +36,46 @@ describe("mock handlers", () => {
 
     expect(response.status).toBe(status);
   });
+
+  describe("challenge list", () => {
+    const get = (query: string) => fetch(apiUrl(`/api/v1/challenges${query}`));
+
+    it("pages: the first page has a cursor, the second doesn't", async () => {
+      const first = await (await get("")).json();
+      const second = await (await get(`?cursor=${first.next_cursor}`)).json();
+
+      expect(first.next_cursor).toBe(fixtures.challenges.challengePage.next_cursor);
+      expect(second.next_cursor).toBeNull();
+      expect(second.items.map((item: { id: number }) => item.id)).toEqual(
+        first.items.map((item: { id: number }) => item.id + 100),
+      );
+    });
+
+    it("refuses a cursor it never gave, as invalid_cursor", async () => {
+      const response = await get("?cursor=made-up");
+
+      expect(response.status).toBe(422);
+      expect(await response.json()).toEqual(fixtures.challenges.errorInvalidCursor);
+    });
+
+    it("filters by type and by title, city or landmark, ignoring case", async () => {
+      const swim = await (await get("?type=swim")).json();
+      const hanoi = await (await get("?q=HANOI")).json();
+      const none = await (await get("?q=paris")).json();
+
+      expect(swim.items.map((item: { title: string }) => item.title)).toEqual(["My Khe Bay 20 km"]);
+      expect(hanoi.items.map((item: { title: string }) => item.title)).toEqual([
+        "Hoan Kiem 50K Steps",
+      ]);
+      expect(none.items).toEqual([]);
+      expect(none.next_cursor).toBeNull();
+    });
+
+    it("answers a search for server-error with a 500", async () => {
+      const response = await get("?q=server-error");
+
+      expect(response.status).toBe(500);
+      expect((await response.json()).error.code).toBe("internal_error");
+    });
+  });
 });
