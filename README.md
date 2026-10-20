@@ -14,7 +14,7 @@ The Next.js app and its tooling are scaffolded (issue #2): the home page is a pl
 
 ## Requirements
 
-- Node.js 20.12 or later, and `npm` (`.nvmrc` pins Node 20)
+- Node.js 20.12 or later, and `npm` (`.nvmrc` pins Node 20.12.1)
 - Google Chrome, used by the Playwright specs and the Playwright MCP server
 - From issue #4 on: the StrideQuest backend running locally, from `claude-code-training` (see its README), with an admin account:
 
@@ -48,7 +48,7 @@ Dependency versions are pinned (`.npmrc` sets `save-exact`). Install from the lo
 
 ## Stop hook for Claude
 
-`.claude/settings.json` runs [`.claude/hooks/check.sh`](.claude/hooks/check.sh) when Claude Code tries to finish. If files differ from the merge base with `develop` (or are untracked), it runs `npm run lint`, `npm run typecheck` and `npm run test`, and blocks the stop with the failures until they pass. After 3 failed stops in a row it lets Claude stop and shows a warning. It needs `git` (and `jq` for the warning), and skips `npm run e2e`.
+`.claude/settings.json` runs [`.claude/hooks/check.sh`](.claude/hooks/check.sh) when Claude Code tries to finish. If files differ from the merge base with `develop` (or are untracked), it runs `npm run lint`, `npm run typecheck` and `npm run test`, and blocks the stop with the failures until they pass. After 3 failed stops in a row it lets Claude stop and shows a warning. It needs `git`; `jq` is optional. It skips `npm run e2e`.
 
 ## Playwright MCP server
 

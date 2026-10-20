@@ -66,6 +66,9 @@ if [ "$blocks" -gt "$MAX_BLOCKS" ]; then
   message="Stop hook: checks still fail after $MAX_BLOCKS attempts, so Claude was allowed to stop. Review the failures before merging."
   if command -v jq >/dev/null 2>&1; then
     jq -n --arg message "$message" '{systemMessage: $message}'
+  else
+    # The message has no quotes or backslashes, so it is valid JSON as is.
+    printf '{"systemMessage": "%s"}\n' "$message"
   fi
   exit 0
 fi
