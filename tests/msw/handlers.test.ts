@@ -1,11 +1,13 @@
 // @vitest-environment node
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { fixtures } from "../fixtures";
+import { resetMockChallenges } from "./handlers/challenges";
 import { server } from "./server";
 import { apiUrl } from "./url";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => resetMockChallenges());
 afterAll(() => server.close());
 
 describe("mock handlers", () => {
@@ -26,14 +28,14 @@ describe("mock handlers", () => {
     expect(body.next_cursor).toBe(fixtures.challenges.challengePage.next_cursor);
   });
 
-  it.each([
-    ["DELETE", "/api/v1/challenges/7", 204],
-    ["GET", "/api/v1/quests", 200],
-  ] as const)("answer %s %s with %i", async (method, path, status) => {
-    const response = await fetch(apiUrl(path), { method });
+  it.each([["GET", "/api/v1/quests", 200]] as const)(
+    "answer %s %s with %i",
+    async (method, path, status) => {
+      const response = await fetch(apiUrl(path), { method });
 
-    expect(response.status).toBe(status);
-  });
+      expect(response.status).toBe(status);
+    },
+  );
 
   it("creates a draft with the title it was given", async () => {
     const response = await fetch(apiUrl("/api/v1/challenges"), {
@@ -130,6 +132,62 @@ describe("mock handlers", () => {
 
       expect(response.status).toBe(500);
       expect((await response.json()).error.code).toBe("internal_error");
+    });
+  });
+
+  describe("one challenge", () => {
+    const call = (method: string, path: string) =>
+      fetch(apiUrl(`/api/v1/challenges/${path}`), { method });
+    const detail = async (id: number) =>
+      (await (await call("GET", String(id))).json()) as { status: string };
+
+    it("reads a published challenge, a draft with nothing, a complete draft and a missing one", async () => {
+      expect((await detail(7)).status).toBe("published");
+      const empty = await (await call("GET", "9")).json();
+      expect(empty).toMatchObject({
+        status: "draft",
+        cover_image_url: null,
+        description_md: "",
+        medals: [],
+      });
+      expect((await detail(11)).status).toBe("draft");
+      expect((await call("GET", "404")).status).toBe(404);
+    });
+
+    it("refuses to publish the empty draft with challenge_not_publishable", async () => {
+      const response = await call("POST", "9/publish");
+
+      expect(response.status).toBe(409);
+      expect((await response.json()).error.code).toBe("challenge_not_publishable");
+    });
+
+    it("publishes, unpublishes and deletes a complete draft, and remembers it", async () => {
+      expect((await call("POST", "11/publish")).status).toBe(200);
+      expect((await detail(11)).status).toBe("published");
+
+      const refused = await call("DELETE", "11");
+      expect(refused.status).toBe(409);
+      expect((await refused.json()).error.code).toBe("challenge_not_draft");
+
+      expect((await call("POST", "11/unpublish")).status).toBe(200);
+      expect((await detail(11)).status).toBe("draft");
+      expect((await call("DELETE", "11")).status).toBe(204);
+      expect((await call("GET", "11")).status).toBe(404);
+      expect((await call("POST", "11/publish")).status).toBe(404);
+    });
+
+    it("answers 501 with a server error", async () => {
+      const response = await call("GET", "501");
+
+      expect(response.status).toBe(500);
+      expect((await response.json()).error.code).toBe("internal_error");
+    });
+
+    it("refuses to delete a draft that people joined with challenge_in_use", async () => {
+      const response = await call("DELETE", "12");
+
+      expect(response.status).toBe(409);
+      expect((await response.json()).error.code).toBe("challenge_in_use");
     });
   });
 });

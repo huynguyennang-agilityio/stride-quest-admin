@@ -5,11 +5,14 @@ import { apiUrl } from "@tests/msw/url";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { listChallenges } from "./queries";
+import { getChallenge, listChallenges } from "./queries";
 
 let accessCookie: string | undefined;
 const redirect = vi.fn((url: string) => {
   throw new Error(`NEXT_REDIRECT ${url}`);
+});
+const notFound = vi.fn(() => {
+  throw new Error("NEXT_NOT_FOUND");
 });
 
 vi.mock("next/headers", () => ({
@@ -18,7 +21,10 @@ vi.mock("next/headers", () => ({
       name === "sq_access" && accessCookie ? { name, value: accessCookie } : undefined,
   }),
 }));
-vi.mock("next/navigation", () => ({ redirect: (url: string) => redirect(url) }));
+vi.mock("next/navigation", () => ({
+  redirect: (url: string) => redirect(url),
+  notFound: () => notFound(),
+}));
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 beforeEach(() => {
@@ -27,6 +33,7 @@ beforeEach(() => {
 afterEach(() => {
   server.resetHandlers();
   redirect.mockClear();
+  notFound.mockClear();
 });
 afterAll(() => server.close());
 
@@ -182,5 +189,95 @@ describe("listChallenges", () => {
     server.use(http.get(apiUrl("/api/v1/challenges"), () => HttpResponse.error()));
 
     await expect(listChallenges(published)).rejects.toMatchObject({ code: "network_error" });
+  });
+});
+
+describe("getChallenge", () => {
+  const quests = [{ id: 1, title: "Hanoi Highlights" }];
+  const detail = fixtures.challenges.challengeDetail;
+
+  it("returns the challenge as a page shows it, calling the backend with the access token", async () => {
+    let authorization: string | null = null;
+    server.use(
+      http.get(apiUrl("/api/v1/challenges/7"), ({ request }) => {
+        authorization = request.headers.get("Authorization");
+        return HttpResponse.json(detail);
+      }),
+    );
+
+    const view = await getChallenge("7", quests);
+
+    expect(view).toMatchObject({
+      id: 7,
+      title: "Hoan Kiem 50K Steps",
+      questTitle: "Hanoi Highlights",
+      status: "published",
+    });
+    expect(authorization).toBe("Bearer access-token");
+  });
+
+  it("shows the not-found page for challenge_not_found", async () => {
+    server.use(
+      http.get(apiUrl("/api/v1/challenges/7"), () =>
+        HttpResponse.json(
+          { error: { code: "challenge_not_found", message: "x", fields: [] } },
+          { status: 404 },
+        ),
+      ),
+    );
+
+    await expect(getChallenge("7", quests)).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it.each(["abc", "0", "99999999999", "new"])(
+    "shows the not-found page for the id %j without calling the backend",
+    async (id) => {
+      let calls = 0;
+      server.use(
+        http.get(apiUrl("/api/v1/challenges/:id"), () => {
+          calls += 1;
+          return HttpResponse.json(detail);
+        }),
+      );
+
+      await expect(getChallenge(id, quests)).rejects.toThrow("NEXT_NOT_FOUND");
+      expect(calls).toBe(0);
+    },
+  );
+
+  it("goes to /login on 401, without trying to refresh", async () => {
+    server.use(
+      http.get(apiUrl("/api/v1/challenges/7"), () =>
+        HttpResponse.json(
+          { error: { code: "token_expired", message: "x", fields: [] } },
+          { status: 401 },
+        ),
+      ),
+    );
+
+    await expect(getChallenge("7", quests)).rejects.toThrow("NEXT_REDIRECT /login");
+  });
+
+  it("throws other errors for the error page", async () => {
+    server.use(
+      http.get(apiUrl("/api/v1/challenges/7"), () =>
+        HttpResponse.json(
+          { error: { code: "internal_error", message: "x", fields: [] } },
+          { status: 500 },
+        ),
+      ),
+    );
+
+    await expect(getChallenge("7", quests)).rejects.toMatchObject({
+      status: 500,
+      code: "internal_error",
+    });
+    expect(notFound).not.toHaveBeenCalled();
+  });
+
+  it("goes to /login without an access cookie", async () => {
+    accessCookie = undefined;
+
+    await expect(getChallenge("7", quests)).rejects.toThrow("NEXT_REDIRECT /login");
   });
 });

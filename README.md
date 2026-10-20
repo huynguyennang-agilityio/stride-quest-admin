@@ -10,7 +10,7 @@ The backend (FastAPI) and the mobile app live in [`claude-code-training`](https:
 
 ## Status
 
-The Next.js app and its tooling (issue #2), and the API contract, typed client, error mapping and mock mode (issue #3) are in place; the home page is a placeholder. Admin sign in and sign out with the route guard (issue #4), the sidebar layout and the challenge list (issue #5) are in place; the form that creates a challenge (issue #6) are in place; viewing, publishing and editing a challenge (issues #7–#8) come next.
+The Next.js app and its tooling (issue #2), and the API contract, typed client, error mapping and mock mode (issue #3) are in place; the home page is a placeholder. Admin sign in and sign out with the route guard (issue #4), the sidebar layout and the challenge list (issue #5) are in place; the form that creates a challenge (issue #6) are in place; the challenge page with publish, unpublish and delete (issue #7) are in place; editing a challenge (issue #8) comes next.
 
 ## Requirements
 
@@ -58,6 +58,10 @@ Sign in is `/login`: the form calls the `signIn` Server Action, which calls `POS
 
 `/challenges` shows the Published and Drafts tabs (`status`), a type filter (`type`), a search (`q`, at most 100 characters, debounced) and "Load more" (`cursor`); all of it is in the URL, so a view can be shared. "Load more" adds the next page to the ones on screen: the server reads the pages up to the cursor of the URL, and a cursor it never gave starts again from the first page. Dates are shown in the browser's timezone (UTC on the first render).
 
+## Challenge page
+
+`/challenges/{id}` shows a challenge (cover, About and Terms as Markdown without HTML, details with times in the browser's timezone, the medals along the target) and what can be done with it by status: a draft can be published or deleted, a published challenge can be moved back to drafts, both behind a confirm dialog. A draft that can't be published yet says what it lacks (a cover image, a description, a medal, an end in the future). Each backend refusal has its own message: `challenge_not_publishable`, `challenge_not_draft`, `challenge_in_use` and `challenge_not_found`. An id that doesn't exist, or can't be one, shows a "Challenge not found" page.
+
 ## New challenge form
 
 `/challenges/new` creates a draft. The form checks the contract's rules before it sends anything (`features/challenges/request-schema.ts`, tested against `contract/examples`), the Server Action checks them again, and the backend's own `fields` land on the matching form fields. A distance (swim, cycle) is typed in km and sent as metres; times are typed in the browser's timezone. Images (the cover, and one per medal) are checked for type and size (JPEG, PNG or WebP, at most 5 MB), then uploaded through a Server Action to `POST /images`; `serverActions.bodySizeLimit` is `6mb` in `next.config.ts` for that. The description preview is a small Markdown reader that never produces HTML. "New quest" creates a quest and selects it. After "Create draft" the person is sent to `/challenges/{id}`, which arrives with issue #7.
@@ -87,7 +91,7 @@ scripts/sync-contract.sh <40-character sha>
 
 The script replaces `contract/`, writes the SHA to `contract/SOURCE` and regenerates `src/lib/api/schema.d.ts`. Test fixtures (`tests/fixtures`) and the MSW handlers (`tests/msw`) load the examples from `contract/examples/`.
 
-With `API_MODE=mock` in `.env.local`, `npm run dev` starts MSW on the server (`src/instrumentation.ts`) and answers every API call with the contract examples, so the screens work without the backend. Sign in succeeds as an admin, the list answers with the two example challenges (a second page behind "Load more", filters on type and search), a search for `slow` keeps the list loading for a minute, and a search for `server-error` shows its error state. On the new challenge form, a title with `backend-error` shows the backend's field errors, and an image whose file name contains `too-large`, `bad-type`, `failed` or `unconfigured` shows each upload error. Mock mode is refused in production.
+With `API_MODE=mock` in `.env.local`, `npm run dev` starts MSW on the server (`src/instrumentation.ts`) and answers every API call with the contract examples, so the screens work without the backend. Sign in succeeds as an admin, the list answers with the two example challenges (a second page behind "Load more", filters on type and search), a search for `slow` keeps the list loading for a minute, and a search for `server-error` shows its error state. On the new challenge form, a title with `backend-error` shows the backend's field errors, and on a challenge's page: `/challenges/7` is published, `9` is a draft with nothing (publishing it is refused), `11` a complete draft, `12` a draft people joined (deleting it is refused), `404` does not exist, `500` stays loading for a minute and `501` shows the error state; publish, unpublish and delete are remembered until the server restarts. An image whose file name contains `too-large`, `bad-type`, `failed` or `unconfigured` shows each upload error. Mock mode is refused in production.
 
 ## Stop hook for Claude
 
