@@ -6,3 +6,5 @@ playwright-report/
 test-results/
 # Markdown is written by hand (docs, plans, agent rules).
 *.md
+contract/
+src/lib/api/schema.d.ts
