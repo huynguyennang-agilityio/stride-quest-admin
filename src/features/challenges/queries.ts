@@ -1,12 +1,13 @@
 import "server-only";
 
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { requireAccessToken } from "@/features/auth/queries";
 import { apiClient } from "@/lib/api/client";
 import { request } from "@/lib/api/errors";
 
 import { toRow, type ChallengeRow } from "./mappers";
+import { parseChallengeId, toDetail, type DetailView } from "./detail";
 import type { ChallengeListParams } from "./schema";
 
 const PAGE_SIZE = 20;
@@ -64,4 +65,30 @@ export async function listChallenges(params: ChallengeListParams): Promise<Chall
     cursor = next;
   }
   return { rows: [], nextCursor: null, cursorReset: true };
+}
+
+/**
+ * One challenge for its page, with its quest's title. An id that can't be one, and
+ * `challenge_not_found`, show the not-found page. A 401 sends the person to /login and
+ * never refreshes.
+ */
+export async function getChallenge(
+  idParam: string,
+  quests: { id: number; title: string }[],
+): Promise<DetailView> {
+  const id = parseChallengeId(idParam);
+  if (id === null) notFound();
+
+  const result = await request(
+    apiClient(await requireAccessToken()).GET("/api/v1/challenges/{challenge_id}", {
+      params: { path: { challenge_id: id } },
+    }),
+  );
+  if (!result.ok) {
+    const { error } = result;
+    if (error.status === 401) redirect("/login");
+    if (error.code === "challenge_not_found") notFound();
+    throw error;
+  }
+  return toDetail(result.data, quests);
 }

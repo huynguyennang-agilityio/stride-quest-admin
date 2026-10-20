@@ -1,7 +1,7 @@
 import { fixtures } from "@tests/fixtures";
 import { describe, expect, it } from "vitest";
 
-import { formatDateRange, formatTarget, toRow } from "./mappers";
+import { formatDateRange, formatDateTime, formatTarget, toRow } from "./mappers";
 
 const [hoanKiem, myKhe] = fixtures.challenges.challengePage.items;
 
@@ -75,5 +75,16 @@ describe("toRow", () => {
 
   it("shows whichever of city and landmark there is", () => {
     expect(toRow({ ...hoanKiem, landmark: null }).place).toBe("Hanoi");
+  });
+});
+
+describe("formatDateTime", () => {
+  it("writes the date and a 24-hour time in UTC", () => {
+    expect(formatDateTime("2026-12-01T00:00:00Z")).toBe("Dec 1, 2026, 00:00");
+    expect(formatDateTime("2026-12-31T23:59:00Z")).toBe("Dec 31, 2026, 23:59");
+  });
+
+  it("uses the timezone it is given", () => {
+    expect(formatDateTime("2026-12-31T23:59:00Z", "Asia/Ho_Chi_Minh")).toBe("Jan 1, 2027, 06:59");
   });
 });

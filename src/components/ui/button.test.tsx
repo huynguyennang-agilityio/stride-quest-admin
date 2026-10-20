@@ -18,11 +18,14 @@ describe("Button", () => {
   it("renders its child element with asChild", () => {
     render(
       <Button asChild>
-        <a href="/challenges">Challenges</a>
+        <a href="https://example.com/help">Help</a>
       </Button>,
     );
 
-    expect(screen.getByRole("link", { name: "Challenges" })).toHaveAttribute("href", "/challenges");
+    expect(screen.getByRole("link", { name: "Help" })).toHaveAttribute(
+      "href",
+      "https://example.com/help",
+    );
   });
 
   it("has no accessibility violations", async () => {

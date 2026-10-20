@@ -64,3 +64,16 @@ export function toRow(item: ChallengeSummary): ChallengeRow {
     coverImageUrl: item.cover_image_url ?? null,
   };
 }
+
+/** "Dec 1, 2026, 00:00", in `timeZone` (UTC until the browser's is known). */
+export function formatDateTime(iso: string, timeZone = "UTC"): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(iso));
+}
