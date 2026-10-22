@@ -133,7 +133,10 @@ export function toRequest(values: ChallengeFormValues): {
 }
 
 /** The form field path of an API field name, `medals.1.threshold_value` → `medals.gold.threshold`. */
-export function formPath(apiField: string, tiers: MedalTier[]): string | null {
+export function formPath(
+  apiField: string,
+  tiers: readonly (MedalTier | undefined)[],
+): string | null {
   const simple: Record<string, string> = {
     title: "title",
     type: "type",

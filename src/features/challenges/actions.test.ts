@@ -322,6 +322,35 @@ describe("updateChallenge", () => {
     expect(result).toMatchObject({ ok: false, error: { fields: { medals: "Name is taken." } } });
   });
 
+  it("keeps the place of a stored tier it doesn't know, so later medals don't shift", async () => {
+    patchAnswers(422, {
+      error: {
+        code: "validation_error",
+        message: "Request is invalid.",
+        fields: [
+          { field: "medals.1.threshold_value", message: "Platinum is too high." },
+          { field: "medals.2.threshold_value", message: "Gold must be earned at the target." },
+        ],
+      },
+    });
+
+    const result = await updateChallenge("7", { target_value: 60000 }, [
+      "bronze",
+      "platinum",
+      "gold",
+    ]);
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        fields: {
+          medals: "Platinum is too high.",
+          "medals.gold.threshold": "Gold must be earned at the target.",
+        },
+      },
+    });
+  });
+
   it.each([
     [
       409,

@@ -83,11 +83,12 @@ describe("ChallengeForm, editing", () => {
       expect(select).toHaveValue("1");
     });
 
-    it("keeps the stored quest selectable when the list doesn't have it", () => {
-      setup({ ...open, quest_id: 42 });
+    it("keeps the stored quest selectable when the list doesn't have it", async () => {
+      const { container } = setup({ ...open, quest_id: 42 });
 
       expect(screen.getByLabelText("Quest")).toHaveValue("42");
       expect(screen.getByRole("option", { name: "Quest 42" })).toBeInTheDocument();
+      expect(await axe(container)).toHaveNoViolations();
     });
   });
 
@@ -365,7 +366,7 @@ describe("ChallengeForm, editing", () => {
           medals: "A challenge has at most three medals.",
         }),
       );
-      const { user } = setup(stored);
+      const { user, container } = setup(stored);
       await user.type(screen.getByLabelText("Title"), "!");
 
       await save(user);
@@ -374,6 +375,7 @@ describe("ChallengeForm, editing", () => {
         await screen.findByText("Gold medal: Gold must be earned at the target."),
       ).toBeInTheDocument();
       expect(screen.getByText("A challenge has at most three medals.")).toBeInTheDocument();
+      expect(await axe(container)).toHaveNoViolations();
     });
 
     it("lets the cover be replaced", async () => {

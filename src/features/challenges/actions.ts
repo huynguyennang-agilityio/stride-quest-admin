@@ -114,10 +114,11 @@ export async function updateChallenge(
     const { error } = result;
     if (error.status === 401) redirect("/login");
 
+    // A stored tier this app doesn't know keeps its place, so the medals after it keep theirs.
     const tiers =
       patch.medals?.map((medal) => medal.tier) ??
-      (Array.isArray(storedTiers) ? storedTiers : []).filter((tier): tier is MedalTier =>
-        (MEDAL_TIERS as readonly unknown[]).includes(tier),
+      (Array.isArray(storedTiers) ? storedTiers : []).map((tier) =>
+        (MEDAL_TIERS as readonly unknown[]).includes(tier) ? (tier as MedalTier) : undefined,
       );
     const fields = backendFields(error.fields, tiers);
     if (error.code === "quest_not_found") fields.questId = updateMessage(error);
