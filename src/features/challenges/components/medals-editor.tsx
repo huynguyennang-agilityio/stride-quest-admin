@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ImageUpload } from "@/features/images/components/image-upload";
 import { cn } from "@/lib/utils";
 
-import { EMPTY_MEDAL, type ChallengeFormValues } from "../form";
+import { EMPTY_MEDAL, medalLabel, type ChallengeFormValues } from "../form";
 import { MEDAL_TIERS, TIER_LABELS, type MedalTier } from "../request-schema";
 import { unitFor } from "../units";
 import { controlProps, Field, useFieldError, useFrozen } from "./form-parts";
@@ -143,10 +143,42 @@ function FrozenMedals() {
   );
 }
 
+/**
+ * Every message on the medals, "Gold medal: …" for one tier. Read-only medals have no field to
+ * carry a message, so they are listed under the medals.
+ */
+function useMedalMessages(): string[] {
+  const {
+    formState: { errors },
+  } = useFormContext<ChallengeFormValues>();
+  const medals = errors.medals;
+  if (!medals) return [];
+  const messages = typeof medals.message === "string" ? [medals.message] : [];
+  for (const tier of MEDAL_TIERS) {
+    for (const field of ["name", "threshold", "imageUrl"] as const) {
+      const message = medals[tier]?.[field]?.message;
+      if (typeof message === "string") messages.push(`${medalLabel(tier)}: ${message}`);
+    }
+  }
+  return messages;
+}
+
 export function MedalsEditor() {
   const summary = useFieldError("medals");
   const frozen = useFrozen();
-  if (frozen) return <FrozenMedals />;
+  const messages = useMedalMessages();
+  if (frozen) {
+    return (
+      <div className="flex flex-col gap-3">
+        <FrozenMedals />
+        {messages.map((message) => (
+          <p key={message} role="alert" className="text-destructive text-sm">
+            {message}
+          </p>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-3">
       {MEDAL_TIERS.map((tier) => (
