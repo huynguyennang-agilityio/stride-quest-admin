@@ -289,6 +289,39 @@ describe("updateChallenge", () => {
     });
   });
 
+  it("maps a medal the patch didn't send by the stored medals' tiers", async () => {
+    patchAnswers(422, {
+      error: {
+        code: "validation_error",
+        message: "Request is invalid.",
+        fields: [
+          { field: "medals.1.threshold_value", message: "Gold must be earned at the target." },
+        ],
+      },
+    });
+
+    const result = await updateChallenge("7", { target_value: 60000 }, ["bronze", "gold"]);
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { fields: { "medals.gold.threshold": "Gold must be earned at the target." } },
+    });
+  });
+
+  it("ignores stored tiers that aren't tiers", async () => {
+    patchAnswers(422, {
+      error: {
+        code: "validation_error",
+        message: "Request is invalid.",
+        fields: [{ field: "medals.0.name", message: "Name is taken." }],
+      },
+    });
+
+    const result = await updateChallenge("7", { target_value: 60000 }, ["platinum", 3]);
+
+    expect(result).toMatchObject({ ok: false, error: { fields: { medals: "Name is taken." } } });
+  });
+
   it.each([
     [
       409,
