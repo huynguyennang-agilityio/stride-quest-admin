@@ -1,7 +1,7 @@
 # Plan 003: Autonomous plan runs
 
-Status: draft
-Approved: <the user fills in the date>
+Status: Approved
+Approved: 2026-10-27
 Issues: <filled in after approval>
 
 ## Context
