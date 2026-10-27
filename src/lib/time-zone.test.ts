@@ -20,6 +20,10 @@ describe("timeZoneLabel", () => {
     expect(timeZoneLabel("UTC", at)).toBe("UTC (GMT)");
   });
 
+  it("writes a zero offset as GMT for any zone", () => {
+    expect(timeZoneLabel("Europe/London", at)).toBe("Europe/London (GMT)");
+  });
+
   it("gives the name alone for a zone it doesn't know", () => {
     expect(timeZoneLabel("Mars/Olympus", at)).toBe("Mars/Olympus");
   });

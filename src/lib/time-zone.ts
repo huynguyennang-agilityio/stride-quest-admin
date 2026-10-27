@@ -4,7 +4,10 @@ export function timeZoneLabel(timeZone: string, at = new Date()): string {
     const part = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortOffset" })
       .formatToParts(at)
       .find((p) => p.type === "timeZoneName");
-    return part ? `${timeZone} (${part.value})` : timeZone;
+    if (!part) return timeZone;
+    // Newer ICU data (Node 26) writes a zero offset as "GMT+0"; older data writes "GMT".
+    const offset = part.value === "GMT+0" ? "GMT" : part.value;
+    return `${timeZone} (${offset})`;
   } catch {
     return timeZone;
   }
