@@ -4,7 +4,7 @@ These diagrams picture the workflow in [`CLAUDE.md`](../CLAUDE.md#workflow). If 
 
 ## 1. Phases and gates
 
-Each change goes through phases 1 to 6 in order, starting from an approved plan file (`docs/plans/`). Only the user can approve a plan, on GitHub or by saying "approve plan NNN" in chat. Approving a step-by-step plan is not authorizing a merge; approving an autonomous plan is (see section 6). Diamonds are gates. A gate that needs the user stops the work until they answer.
+Each change goes through phases 1 to 6 in order, starting from an approved plan file (`docs/plans/`). Only the user can approve a plan, on GitHub or by saying "approve plan NNN" in chat. Approving a plan in chat lets Claude merge the plan PR. Approving a step-by-step plan is not authorizing the merge of its task PRs; approving an autonomous plan is (see section 6). Diamonds are gates. A gate that needs the user stops the work until they answer.
 
 Phase 0 (project foundation: architecture, stack, layout, Claude rules, Playwright MCP server, tooling) is not a step of each change. It is done once and revisited only when the foundation itself changes, through its own issue.
 
@@ -19,7 +19,8 @@ flowchart TD
     PLAN --> PMR["Push docs/plan-NNN-name,<br/>open the plan PR"]
     PMR --> APPR{"User approves:<br/>Status: approved on GitHub,<br/>or 'approve plan NNN' in chat?"}
     APPR -- "no / edits needed" --> PLAN
-    APPR -- yes --> ISSUE["Create the issues exactly as the plan lists them<br/>(Plan: link in each),<br/>branch type/id-name from develop"]
+    APPR -- "yes, Run mode: autonomous" --> RUN(["Autonomous plan run:<br/>see section 6"])
+    APPR -- "yes, step by step<br/>(chat approval: Claude merges the plan PR)" --> ISSUE["Create the issues exactly as the plan lists them<br/>(Plan: link in each),<br/>branch type/id-name from develop"]
     ISSUE --> P2["Phase 2: Impact analysis,<br/>check the contract in contract/"]
     P2 --> G2{"Needs something the<br/>approved plan or the contract<br/>does not cover?"}
     G2 -- yes --> PLAN
@@ -117,9 +118,9 @@ A plan with `Run mode: autonomous` needs one approval, in chat. The session wher
 
 ```mermaid
 flowchart TD
-    A(["User: 'approve plan NNN' in chat"]) --> B["Orchestrator: Status approved,<br/>create the issues, Issues: line,<br/>merge the plan PR, open NNN-name-notes.md"]
+    A(["User: 'approve plan NNN' in chat"]) --> B["Orchestrator: Status approved,<br/>create the issues, Issues: line,<br/>merge the plan PR, start NNN-name-notes.md<br/>on docs/plan-NNN-notes"]
     B --> W{"Tasks left whose<br/>dependencies are merged?"}
-    W -- yes --> S["Start child sessions for the next wave<br/>(never more than 2 running)"]
+    W -- yes --> S["Start child sessions for the next wave<br/>(never more than 2 running,<br/>only one using the app on localhost:3000)"]
     S --> T["Child session: branch from develop →<br/>code + tests → lint, types, tests →<br/>Playwright evidence → PR → code-reviewer →<br/>fix → update from develop → merge → verify"]
     T --> R{"Result"}
     R -- merged --> N["Copy its notes into the notes file"]
