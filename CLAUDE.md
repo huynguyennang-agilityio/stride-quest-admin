@@ -60,16 +60,16 @@ The API contract is the source of truth for both repositories. It lives in `clau
 
 ## Workflow
 
-Every change goes through the phases below in order. Don't skip a gate. When a gate needs the user's approval, stop and ask. The phases, branching and review flow are drawn in [`docs/workflow.md`](docs/workflow.md); if it disagrees with this file, this file wins.
+Every change goes through the phases below in order. Don't skip a gate. When a gate needs the user's approval, stop and ask, except inside an [autonomous plan run](#autonomous-plan-runs), where the approval of the plan covers every gate of its tasks. The phases, branching and review flow are drawn in [`docs/workflow.md`](docs/workflow.md); if it disagrees with this file, this file wins.
 
 General rules:
 
 - Every non-trivial change starts from an approved plan file (Phase 1). No plan, no issue and no code.
-- Work on one GitHub issue at a time.
+- Work on one GitHub issue at a time. In an autonomous plan run, each child session works on one issue, and at most 2 run at once.
 - `develop` is the default branch. `main` holds released code and only receives merges from `develop`.
 - Never push directly to `develop` or `main`.
-- Don't commit unless asked. After each task, suggest a short commit message.
-- A grant such as "go ahead without asking" or "skip the review" covers only the tasks or the session the user named. Don't carry it to new work.
+- Don't commit unless asked (an autonomous plan run counts as asked for its own tasks). After each task, suggest a short commit message.
+- A grant such as "go ahead without asking" or "skip the review" covers only the tasks or the session the user named. Don't carry it to new work. The approval of an autonomous plan covers exactly that plan: a new plan, or an edit to it, needs a new approval.
 
 ### Git and GitHub permissions
 
@@ -78,13 +78,13 @@ Being able to run a command is not permission to run it.
 | Action | Allowed |
 | --- | --- |
 | Write a plan under `docs/plans/`, push its `docs/plan-NNN-<name>` branch and open its PR | Yes, when the user asks for work that needs a plan |
-| Set `Status: approved` on a plan | Never. Only the user does |
+| Set `Status: approved` on a plan | Only after the user approves that plan in chat in this session ("approve plan NNN"), with `Approved by: <user> in chat`. Otherwise the user does it |
 | Create an issue | Only from a plan whose `Status:` is `approved` on `develop`, exactly as the plan lists them |
 | Create a branch and edit files for an issue from an approved plan | Yes |
-| Commit | Only when the user asks |
-| Push, open a PR | Only when the user asks or the task explicitly includes it |
-| Merge a PR, close an issue | Only when the user explicitly authorizes that PR or issue |
-| Push to `develop`/`main`, force-push, delete branches | Never |
+| Commit | Only when the user asks, or inside an autonomous run of an approved plan |
+| Push, open a PR | Only when the user asks, the task explicitly includes it, or inside an autonomous run of an approved plan |
+| Merge a PR, close an issue | Only when the user explicitly authorizes that PR or issue, or inside an autonomous run for the PRs and issues of that plan (merge into `develop` only) |
+| Push to `develop`/`main`, force-push, delete branches, merge into `main` | Never |
 
 If a GitHub action isn't possible in the current session (no `gh`, no network, tool not permitted), say so and give the user the exact content to do it themselves: issue text, PR title and description, or commands.
 
@@ -99,7 +99,7 @@ Every change goes through a plan file first. The one exception is a trivial chan
 1. Classify the ticket by type and check that it has the evidence below (the ticket evidence gate).
 2. Write the plan as `docs/plans/NNN-<short-name>.md` (`NNN` is the next number; use the template in [`docs/plans/README.md`](docs/plans/README.md)): context, open questions and assumptions, approach (routes, features, files, API calls, security), risks, verification, and the list of issues to create, each with a title, labels, acceptance criteria and dependencies.
 3. Put it on a `docs/plan-NNN-<short-name>` branch from `develop` and open a PR into `develop`. A plan needs no issue. Its first line after the title is `Status: draft`.
-4. Stop. The user reviews the plan and, when they agree, sets `Status: approved` (with the date) and merges the PR, or tells you to. You never write `approved` yourself. If the plan is edited after approval, it goes back to `draft` and needs approval again.
+4. Publish the plan as an Artifact for reading, then stop. The user reviews the plan and, when they agree, either sets `Status: approved` (with the date) and merges the PR, or says "approve plan NNN" in chat. Only after that chat approval do you write `Status: approved`, `Approved: <date>` and `Approved by: <user> in chat`, and merge the plan PR. You never write `approved` without it. If the plan is edited after approval, it goes back to `draft` and needs approval again; writing the issue numbers into `Issues:` is not an edit.
 5. Only when the plan is `approved` on `develop`: create the issues exactly as the plan lists them, each with `Plan: docs/plans/NNN-<short-name>.md` in its description, and write the issue numbers back into the plan's `Issues:` line (a docs change through its own PR).
 6. Branch from `develop` as `<type>/<issue-id>-<short-name>` (for example `docs/1-workflow`, `feat/4-sign-in`).
 
@@ -201,19 +201,30 @@ Before opening a PR, confirm:
 
 1. When the user asks, push the branch and open a PR into `develop` using `.github/pull_request_template.md`, link the issue with `Closes #<id>`, and name the plan (`Plan: docs/plans/NNN-<short-name>.md`). Say where the work deviates from the plan, or write "No deviations".
 2. As soon as the PR is open, Claude runs the `code-reviewer` subagent on it, following [Reviewing pull requests](#reviewing-pull-requests). This happens automatically; don't wait for the user to ask.
-3. The user reviews the PR.
+3. The user reviews the PR. In an autonomous plan run there is no user review per PR: Claude addresses the `code-reviewer` findings, and the user reviews the run's notes file afterwards.
 4. Address the review comments, then repeat Phases 3 and 4.
 
 ### Phase 6: Merge and close
 
 1. The user approves the PR.
-2. Claude merges only after the user explicitly authorizes merging that PR. Approving a plan, or an earlier "go ahead", is not that authorization.
+2. Claude merges only after the user explicitly authorizes merging that PR. Approving a plan, or an earlier "go ahead", is not that authorization, unless the plan is run as an autonomous plan run: then the plan's approval authorizes merging that plan's task PRs into `develop`, once `code-reviewer` has no "request changes" finding and the checks pass.
 3. Verify `develop` after the merge:
    - the PR shows as merged into `develop`;
    - the merge commit and diff on `develop` contain the change;
    - the relevant local checks pass again on `develop`, when feasible.
 4. Report a pipeline result only if a pipeline is configured and actually ran. The repo has no CI right now, so say "no pipeline" instead.
 5. Close the issue if `Closes #<id>` did not close it.
+
+### Autonomous plan runs
+
+A plan with `Run mode: autonomous` runs end to end after one approval. The step-by-step guide is the [`run-plan`](.claude/skills/run-plan/SKILL.md) skill; this section holds the rules.
+
+1. **Approval.** The user says "approve plan NNN" in chat (an Artifact comment relayed to the session counts the same). That one message authorizes, for that plan only: setting `Status: approved`, creating its issues and branches, commits, pushes, PRs, the review, merges into `develop` and closing its issues.
+2. **Orchestrator.** The session where the user approved sets the approval lines, creates the issues, writes their numbers into `Issues:`, merges the plan PR and creates `docs/plans/NNN-<short-name>-notes.md`. Then it runs the plan's waves in order, each task in its own child session (`start_session`, its own worktree, fresh context). **Never more than 2 child sessions run at once.** When one ends, it checks the result (PR merged, the change on `develop`), copies the session's notes into the notes file and starts the next task whose dependencies are merged.
+3. **Task sessions.** Each one follows Phases 2 to 6 for its issue: branch from the latest `develop`, code and tests, lint, type check, tests, Playwright MCP evidence, commit, push, PR, `code-reviewer`, fix the findings, update from `develop` when it moved, merge, verify `develop`. It never asks the user; it ends with a "Notes for the run" section.
+4. **No questions, only notes.** A non-essential gap: assume, note it, continue. A task that needs something the plan or the contract does not cover (a backend change, a new dependency, a security change the plan does not name, an integration gate that is not met): don't do it, mark it `blocked`, skip its dependents. Checks still failing after 3 attempts, or "request changes" after 2 fix rounds: leave the PR open and unmerged, mark it `needs discussion`, skip its dependents.
+5. **End of the run.** Rerun `npm run lint`, `npm run typecheck`, `npm run test` (and `npm run e2e` when the plan has integration work) on `develop`, write the summary into the notes file, merge it through a docs PR, and report to the user with the PR links and the notes. The user and Claude then go through the notes to plan fixes and improvements.
+6. **Never, even in a run:** push directly to `develop` or `main`, force-push, delete branches, merge into `main`, edit `contract/` by hand, act in another repository, or break the browser and credential rules in Phase 3.
 
 ## Reviewing pull requests
 

@@ -4,7 +4,7 @@ These diagrams picture the workflow in [`CLAUDE.md`](../CLAUDE.md#workflow). If 
 
 ## 1. Phases and gates
 
-Each change goes through phases 1 to 6 in order, starting from an approved plan file (`docs/plans/`). Only the user can approve a plan; approving it is not authorizing a merge. Diamonds are gates. A gate that needs the user stops the work until they answer.
+Each change goes through phases 1 to 6 in order, starting from an approved plan file (`docs/plans/`). Only the user can approve a plan, on GitHub or by saying "approve plan NNN" in chat. Approving a step-by-step plan is not authorizing a merge; approving an autonomous plan is (see section 6). Diamonds are gates. A gate that needs the user stops the work until they answer.
 
 Phase 0 (project foundation: architecture, stack, layout, Claude rules, Playwright MCP server, tooling) is not a step of each change. It is done once and revisited only when the foundation itself changes, through its own issue.
 
@@ -17,7 +17,7 @@ flowchart TD
     G1 -- no --> ASK1["Ask the user for it"] --> G1
     G1 -- yes --> PLAN["Write docs/plans/NNN-name.md<br/>Status: draft<br/>(open questions, approach, risks,<br/>verification, issues to create)"]
     PLAN --> PMR["Push docs/plan-NNN-name,<br/>open the plan PR"]
-    PMR --> APPR{"User sets<br/>Status: approved<br/>and merges the plan PR?"}
+    PMR --> APPR{"User approves:<br/>Status: approved on GitHub,<br/>or 'approve plan NNN' in chat?"}
     APPR -- "no / edits needed" --> PLAN
     APPR -- yes --> ISSUE["Create the issues exactly as the plan lists them<br/>(Plan: link in each),<br/>branch type/id-name from develop"]
     ISSUE --> P2["Phase 2: Impact analysis,<br/>check the contract in contract/"]
@@ -110,3 +110,22 @@ flowchart LR
 ## 5. Permissions
 
 The permission rules (what Claude may write, commit, push, create or merge, and that only the user approves a plan) stay as the table in [`CLAUDE.md`](../CLAUDE.md#git-and-github-permissions). They are not drawn as a diagram, so there is only one place to change them.
+
+## 6. Autonomous plan run
+
+A plan with `Run mode: autonomous` needs one approval, in chat. The session where the user approved is the orchestrator; each task runs in its own child session, at most 2 at once. Nothing stops to ask the user: doubts go into the notes file. The rules are in [`CLAUDE.md`](../CLAUDE.md#autonomous-plan-runs), the steps in the [`run-plan`](../.claude/skills/run-plan/SKILL.md) skill.
+
+```mermaid
+flowchart TD
+    A(["User: 'approve plan NNN' in chat"]) --> B["Orchestrator: Status approved,<br/>create the issues, Issues: line,<br/>merge the plan PR, open NNN-name-notes.md"]
+    B --> W{"Tasks left whose<br/>dependencies are merged?"}
+    W -- yes --> S["Start child sessions for the next wave<br/>(never more than 2 running)"]
+    S --> T["Child session: branch from develop →<br/>code + tests → lint, types, tests →<br/>Playwright evidence → PR → code-reviewer →<br/>fix → update from develop → merge → verify"]
+    T --> R{"Result"}
+    R -- merged --> N["Copy its notes into the notes file"]
+    R -- "blocked / needs discussion" --> K["Mark it in the notes,<br/>skip its dependents"]
+    N --> W
+    K --> W
+    W -- no --> E["Checks on develop,<br/>notes PR merged,<br/>report to the user"]
+    E --> D(["User and Claude go through the notes:<br/>fixes and improvements"])
+```
