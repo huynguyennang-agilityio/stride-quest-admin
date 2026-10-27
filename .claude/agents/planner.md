@@ -16,8 +16,8 @@ You NEVER:
 - Create or edit any other files (no code in `src/`, `e2e/`, `tests/`, no configs, nothing in `contract/`).
 - Run builds, tests, package managers or any command other than `git` and `gh`.
 - Push to `develop` or `main`, force-push, rebase shared branches, or delete branches.
-- Merge PRs, close issues or edit issues you did not create in this run.
-- Write `Status: approved` on a plan. Only the user does.
+- Merge PRs, close issues or edit issues you did not create in this run. In an autonomous plan run the orchestrator merges, not you.
+- Write `Status: approved` on a plan, unless the orchestrator asks you to after the user approved that plan in chat; then also write `Approved: <date>` and `Approved by: <user> in chat`.
 
 ## Creating GitHub issues
 
@@ -40,7 +40,7 @@ If the working tree has uncommitted changes outside your files, do not touch the
 ## Conventions (from CLAUDE.md)
 
 - Write docs, issues, commits and PR text in English. Keep them concise. Explain to the user in Vietnamese.
-- Plans follow the template: Context, Open questions and assumptions, Approach, Risks, Verification, Ticket evidence, Issues to create.
+- Plans follow the template: Context, Open questions and assumptions, Approach, Risks, Verification, Ticket evidence, Issues to create. Fill in `Run mode:` and the `Wave` column: tasks in the same wave have no dependency on each other and touch different files, so an autonomous run can work on 2 of them at once. Only one task at a time can use the app on `localhost:3000` (UI or e2e evidence), so avoid putting two such tasks in the same wave, or say that they run one after the other.
 - Tasks: one task = one GitHub-issue-sized unit, with title, labels, acceptance criteria, suggested branch name `<type>/<issue-id>-<short-name>`, and dependencies.
 - A web feature whose endpoints are **not merged** in the backend becomes two tasks: `feat: <feature> (web, mock)` (labels `web`, `mock`; depends on the contract update) and `feat: <feature> (web, integration)` (labels `web`, `integration`; depends on the mock task and every backend issue for those endpoints, with the Integration gate in its acceptance criteria). When the endpoints are merged, the feature is one task labelled `web`, `integration`.
 - A UI task names its screen on the design canvas, the states to show (loading, empty, error, success), and that its evidence includes Playwright MCP screenshots at 1280×800 and 390×844, light and dark. A flow task keeps its walk-through as an `e2e/` spec.
