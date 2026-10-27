@@ -19,8 +19,8 @@ flowchart TD
     PLAN --> PMR["Push docs/plan-NNN-name,<br/>open the plan PR"]
     PMR --> APPR{"User approves:<br/>Status: approved on GitHub,<br/>or 'approve plan NNN' in chat?"}
     APPR -- "no / edits needed" --> PLAN
-    APPR -- "yes, Run mode: autonomous" --> RUN(["Autonomous plan run:<br/>see section 6"])
-    APPR -- "yes, step by step<br/>(chat approval: Claude merges the plan PR)" --> ISSUE["Create the issues exactly as the plan lists them<br/>(Plan: link in each),<br/>branch type/id-name from develop"]
+    APPR -- "yes in chat,<br/>Run mode: autonomous" --> RUN(["Autonomous plan run:<br/>see section 6"])
+    APPR -- "yes, step by step,<br/>or autonomous approved on GitHub<br/>(chat approval: Claude merges the plan PR)" --> ISSUE["Create the issues exactly as the plan lists them<br/>(Plan: link in each),<br/>branch type/id-name from develop"]
     ISSUE --> P2["Phase 2: Impact analysis,<br/>check the contract in contract/"]
     P2 --> G2{"Needs something the<br/>approved plan or the contract<br/>does not cover?"}
     G2 -- yes --> PLAN
