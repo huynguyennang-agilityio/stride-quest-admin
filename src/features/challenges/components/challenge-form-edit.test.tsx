@@ -23,6 +23,8 @@ const quests = [{ id: 1, title: "Hanoi Highlights", description: "" }];
 const stored = fixtures.challenges.challengeDetail as EditableChallenge;
 const open: EditableChallenge = { ...stored, participant_count: 0 };
 const draft: EditableChallenge = { ...open, status: "draft" };
+// The tiers of the stored medals, in the API's order, for the backend's `medals.N` fields.
+const STORED_TIERS = stored.medals.map((medal) => medal.tier);
 
 const fail = (
   code: string,
@@ -72,9 +74,36 @@ describe("ChallengeForm, editing", () => {
       expect(screen.getByRole("link", { name: "Cancel" })).toHaveAttribute("href", "/challenges/7");
       expect(await axe(container)).toHaveNoViolations();
     });
+
+    it("offers no default quest, which the API can't move a challenge back to", () => {
+      setup();
+
+      const select = screen.getByLabelText("Quest");
+      expect(screen.queryByRole("option", { name: "Default quest" })).not.toBeInTheDocument();
+      expect(select).toHaveValue("1");
+    });
+
+    it("keeps the stored quest selectable when the list doesn't have it", async () => {
+      const { container } = setup({ ...open, quest_id: 42 });
+
+      expect(screen.getByLabelText("Quest")).toHaveValue("42");
+      expect(screen.getByRole("option", { name: "Quest 42" })).toBeInTheDocument();
+      expect(await axe(container)).toHaveNoViolations();
+    });
   });
 
   describe("saving", () => {
+    it("measures the patch against what the form loaded, not a newer challenge", async () => {
+      const { user, rerender } = setup();
+      rerender(<ChallengeForm quests={quests} challenge={{ ...open, city: "Da Nang" }} />);
+
+      await user.type(screen.getByLabelText("Title"), "!");
+      await save(user);
+
+      await waitFor(() => expect(updateMock).toHaveBeenCalledOnce());
+      expect(updateMock).toHaveBeenCalledWith("7", { title: "Hoan Kiem 50K Steps!" }, STORED_TIERS);
+    });
+
     it("sends only the changed fields", async () => {
       const { user } = setup();
 
@@ -83,7 +112,11 @@ describe("ChallengeForm, editing", () => {
       await save(user);
 
       await waitFor(() => expect(updateMock).toHaveBeenCalledOnce());
-      expect(updateMock).toHaveBeenCalledWith("7", { title: "Hoan Kiem Lake 50K Steps" });
+      expect(updateMock).toHaveBeenCalledWith(
+        "7",
+        { title: "Hoan Kiem Lake 50K Steps" },
+        STORED_TIERS,
+      );
     });
 
     it("sends null for a city, a landmark and a cover that were cleared", async () => {
@@ -95,11 +128,15 @@ describe("ChallengeForm, editing", () => {
       await save(user);
 
       await waitFor(() => expect(updateMock).toHaveBeenCalledOnce());
-      expect(updateMock).toHaveBeenCalledWith("7", {
-        city: null,
-        landmark: null,
-        cover_image_url: null,
-      });
+      expect(updateMock).toHaveBeenCalledWith(
+        "7",
+        {
+          city: null,
+          landmark: null,
+          cover_image_url: null,
+        },
+        STORED_TIERS,
+      );
     });
 
     it("sends a changed medal with all the medals, and a new quest", async () => {
@@ -257,7 +294,7 @@ describe("ChallengeForm, editing", () => {
       await save(user);
 
       await waitFor(() => expect(updateMock).toHaveBeenCalledOnce());
-      expect(updateMock).toHaveBeenCalledWith("7", { cover_image_url: null });
+      expect(updateMock).toHaveBeenCalledWith("7", { cover_image_url: null }, STORED_TIERS);
     });
   });
 
@@ -288,10 +325,14 @@ describe("ChallengeForm, editing", () => {
       await save(user);
 
       await waitFor(() => expect(updateMock).toHaveBeenCalledOnce());
-      expect(updateMock).toHaveBeenCalledWith("7", {
-        title: "Hoan Kiem 50K Steps!",
-        city: null,
-      });
+      expect(updateMock).toHaveBeenCalledWith(
+        "7",
+        {
+          title: "Hoan Kiem 50K Steps!",
+          city: null,
+        },
+        STORED_TIERS,
+      );
     });
 
     it("saves even when a frozen value would not pass today's rules", async () => {
@@ -318,6 +359,25 @@ describe("ChallengeForm, editing", () => {
       expect(await screen.findByRole("alert")).toHaveTextContent("People have joined");
     });
 
+    it("shows the backend's medal errors under the read-only medals", async () => {
+      updateMock.mockResolvedValue(
+        fail("validation_error", "Check the highlighted fields and try again.", {
+          "medals.gold.threshold": "Gold must be earned at the target.",
+          medals: "A challenge has at most three medals.",
+        }),
+      );
+      const { user, container } = setup(stored);
+      await user.type(screen.getByLabelText("Title"), "!");
+
+      await save(user);
+
+      expect(
+        await screen.findByText("Gold medal: Gold must be earned at the target."),
+      ).toBeInTheDocument();
+      expect(screen.getByText("A challenge has at most three medals.")).toBeInTheDocument();
+      expect(await axe(container)).toHaveNoViolations();
+    });
+
     it("lets the cover be replaced", async () => {
       const url = "https://res.cloudinary.com/demo/image/upload/stridequest/covers/new.jpg";
       uploadMock.mockResolvedValue({
@@ -333,7 +393,7 @@ describe("ChallengeForm, editing", () => {
       await save(user);
 
       await waitFor(() => expect(updateMock).toHaveBeenCalledOnce());
-      expect(updateMock).toHaveBeenCalledWith("7", { cover_image_url: url });
+      expect(updateMock).toHaveBeenCalledWith("7", { cover_image_url: url }, STORED_TIERS);
     });
   });
 });

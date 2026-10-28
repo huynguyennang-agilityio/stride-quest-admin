@@ -99,7 +99,8 @@ export function toPatch(
   if (after.target_value !== before.target_value) patch.target_value = after.target_value;
   if (instant(after.starts_at) !== instant(before.starts_at)) patch.starts_at = after.starts_at;
   if (instant(after.ends_at) !== instant(before.ends_at)) patch.ends_at = after.ends_at;
-  // "Default quest" (none picked) leaves the stored quest as it is: the API can't unset it.
+  // No quest picked leaves the stored one as it is: the API can't unset it, so the edit form
+  // doesn't offer "Default quest".
   if (after.quest_id !== undefined && after.quest_id !== before.quest_id) {
     patch.quest_id = after.quest_id;
   }

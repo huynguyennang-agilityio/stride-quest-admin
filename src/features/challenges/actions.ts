@@ -12,7 +12,12 @@ import { request } from "@/lib/api/errors";
 import { parseChallengeId } from "./detail";
 import { formPath } from "./form";
 import { createMessage, updateMessage, VALIDATION_MESSAGE } from "./messages";
-import { createChallengeSchema, updateChallengeSchema } from "./request-schema";
+import {
+  createChallengeSchema,
+  MEDAL_TIERS,
+  updateChallengeSchema,
+  type MedalTier,
+} from "./request-schema";
 
 /** The messages of a body that failed its schema, by form field path; what has no field is under `root`. */
 function invalidFields(input: unknown, issues: z.core.$ZodIssue[]): Record<string, string> {
@@ -76,11 +81,13 @@ export async function createChallenge(input: unknown): Promise<ActionResult<neve
 /**
  * Edits a challenge (`PATCH /challenges/{id}`) with the fields the form changed. On success
  * it redirects to the challenge, so it only returns on failure. `fields` are keyed by form
- * field path, as in `createChallenge`.
+ * field path, as in `createChallenge`. `storedTiers` are the tiers of the stored medals, in
+ * the API's order: the backend can name a medal the patch didn't send (`medals.2.…`).
  */
 export async function updateChallenge(
   idParam: string,
   input: unknown,
+  storedTiers: unknown = [],
 ): Promise<ActionResult<never>> {
   const id = parseChallengeId(idParam);
   if (id === null) {
@@ -107,10 +114,13 @@ export async function updateChallenge(
     const { error } = result;
     if (error.status === 401) redirect("/login");
 
-    const fields = backendFields(
-      error.fields,
-      (patch.medals ?? []).map((medal) => medal.tier),
-    );
+    // A stored tier this app doesn't know keeps its place, so the medals after it keep theirs.
+    const tiers =
+      patch.medals?.map((medal) => medal.tier) ??
+      (Array.isArray(storedTiers) ? storedTiers : []).map((tier) =>
+        (MEDAL_TIERS as readonly unknown[]).includes(tier) ? (tier as MedalTier) : undefined,
+      );
+    const fields = backendFields(error.fields, tiers);
     if (error.code === "quest_not_found") fields.questId = updateMessage(error);
     return failure(error.code, updateMessage(error), fields);
   }

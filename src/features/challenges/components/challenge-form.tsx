@@ -2,7 +2,7 @@
 
 import { CircleAlert, LoaderCircle } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { flushSync } from "react-dom";
 import { FormProvider, useForm, useFormContext, type Path } from "react-hook-form";
 
@@ -86,9 +86,12 @@ function TypePicker() {
 
 function Basics({
   quests,
+  storedQuestId,
   onQuestCreated,
 }: {
   quests: Quest[];
+  /** Set when editing: the API can't move a challenge back to the default quest. */
+  storedQuestId?: number;
   onQuestCreated: (quest: Quest) => void;
 }) {
   const { register, watch } = useFormContextValues();
@@ -123,7 +126,11 @@ function Basics({
         <Field id="quest" label="Quest" error={questError}>
           <div className="flex items-center gap-2">
             <Select {...controlProps("quest", questError)} {...register("questId")}>
-              <option value="">Default quest</option>
+              {storedQuestId === undefined ? <option value="">Default quest</option> : null}
+              {storedQuestId !== undefined &&
+              !quests.some((quest) => quest.id === storedQuestId) ? (
+                <option value={storedQuestId}>Quest {storedQuestId}</option>
+              ) : null}
               {quests.map((quest) => (
                 <option key={quest.id} value={quest.id}>
                   {quest.title}
@@ -270,7 +277,9 @@ export function ChallengeForm({ quests: initialQuests, challenge }: Props) {
   const [quests, setQuests] = useState(initialQuests);
   const [banner, setBanner] = useState<{ message: string; details: string[] } | null>(null);
   const [pending, startTransition] = useTransition();
-  const initial = useMemo(() => (challenge ? toFormValues(challenge) : EMPTY_FORM), [challenge]);
+  // Read once: the form keeps its first default values, so what a patch is measured against
+  // must not move when the page renders again with a newer challenge.
+  const [initial] = useState(() => (challenge ? toFormValues(challenge) : EMPTY_FORM));
   const frozen = challenge ? isFrozen(challenge.participant_count) : false;
   const form = useForm<ChallengeFormValues>({
     resolver: resolverFor(frozen),
@@ -302,7 +311,11 @@ export function ChallengeForm({ quests: initialQuests, challenge }: Props) {
       }
       startTransition(async () => {
         // On success the action redirects, so it only returns a failure.
-        const result = await updateChallenge(String(challenge.id), patch);
+        const result = await updateChallenge(
+          String(challenge.id),
+          patch,
+          challenge.medals.map((medal) => medal.tier),
+        );
         if (!result.ok) show(result.error.message, result.error.fields);
       });
       return;
@@ -344,6 +357,7 @@ export function ChallengeForm({ quests: initialQuests, challenge }: Props) {
 
           <Basics
             quests={quests}
+            storedQuestId={challenge?.quest_id}
             onQuestCreated={(quest) => {
               // The option has to be in the select before the select can take its value.
               flushSync(() => setQuests((current) => [...current, quest]));
